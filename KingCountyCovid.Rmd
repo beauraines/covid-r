@@ -1,0 +1,272 @@
+---
+title: "King County Covid Cases"
+author: "Beau Raines"
+date: "7/4/2021"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library(zoo)
+library(hrbrthemes)
+library(plotly)
+library(emojifont)
+
+
+```
+
+
+```{r daily-and-rolling-14-day-average-cases, include = FALSE}
+fips = read.csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", header=FALSE)
+nytimes= read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv?raw=true")
+king_county = subset(nytimes,state =='Washington' & county == "King")
+county_population = read.csv("https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv")
+
+data <- data.frame(date = as.Date(tail(king_county$date,-1)), new_cases = diff(king_county$cases), new_deaths = diff(king_county$deaths))
+## missing very very first day
+p <- ggplot(data, aes(x=date, y=new_cases)) +
+  # geom_line() +
+  geom_bar(stat = "identity") +
+  xlab("")+ylab("New Cases")
+p+scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+p
+
+x<-zoo(data$new_cases)
+
+rolling_average = data.frame(date = as.Date(tail(king_county$date,-14)), rolling_new_cases_14d = rollmean(x,14))
+
+p2 = ggplot(data=rolling_average, aes(x=date,y=rolling_new_cases_14d,group=1))+geom_line()+xlab("")
+p2 +ylab("14 Day Rolling Average New Cases")
+p2 +scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+
+combined_plot = ggplot() +
+  geom_bar(stat="identity",data=data, aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
+  geom_line(data=rolling_average, colour= "darkblue", aes(x=date,y=rolling_new_cases_14d,group=1)) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Cases")
+combined_plot
+
+# Add annotation
+#combined_plot +
+#  annotate(geom="text",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases,label="Christmas Day") +
+#  annotate(geom="point",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases, size=10, shape=21, fill="transparent")
+
+## Add titles
+combined_plot = combined_plot +
+  labs(title="King County Covid-19 Cases",caption="Data sourced from NY Times GitHub")
+
+cases_per_100K_14d = sum(tail(data$new_cases,14))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
+
+if(cases_per_100K_14d >= 75) {
+  risk = "High"
+} else if (cases_per_100K_14d >= 25 ){
+  risk = "Moderate"
+} else {
+  risk = "Low"
+}
+
+
+## Write on plot
+# combined_plot = combined_plot + annotate(geom="text",x=as.Date(Sys.Date()-21),y=2000,label=paste("Cases per 100k pop:",round(cases_per_100K_14d,2),sep="\n"))
+
+# ipsum Theme
+combined_plot = combined_plot  + 
+  theme_ipsum()
+combined_plot
+
+## Source runs, but doesn't display the plots.
+# it seems you have to create them as an object then display it afterwards
+source("hospitalizations.R", local = knitr::knit_global())
+beds
+```
+
+
+## King County Covid Cases
+
+Yesterday, `r tail(data$date,1)` there were `r tail(data$new_cases,1)` new cases reported. King County has a population of `r format(subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019),big.mark = ",")`. This is `r format(cases_per_100K_14d,digits=3,decimal.mark=".",  nsmall =1)` cases per 100k population over the last 14 days, which is `r risk` risk.
+
+### new Cases
+```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left'}
+yesterday_new_cases <- tail(data$new_cases,1)
+
+df <- data.frame(
+  x = 1,
+  y = 1,
+  h = 4.25,
+  w = 6.25,
+  value = c(yesterday_new_cases),
+  info = c("new cases"),
+  icon = fontawesome(search_fontawesome("chart"))[1],
+  font_family = c("fontawesome-webfont",
+                  "EmojiOne"),
+  color = factor(1)
+)
+
+ggplot(df, aes(x, y, height = h, width = w, label = info)) +
+  ## Create the tiles using the `color` column
+  geom_tile(aes(fill = color)) +
+  ## Add the numeric values as text in `value` column
+  geom_text(color = "white", fontface = "bold", size = 10,
+            aes(label = value, x = x - 2.9, y = y + 1), hjust = 0) +
+  ## Add the labels for each box stored in the `info` column
+  geom_text(color = "white", fontface = "bold",
+            aes(label = info, x = x - 2.9, y = y - 1), hjust = 0) +
+  coord_fixed() +
+  scale_fill_brewer(type = "qual",palette = "Dark2") +
+  ## Use `geom_text()` to add the icons by specifying the unicode symbol.
+  geom_text(size = 20, aes(label = icon, family = font_family,
+                           x = x + 1.5, y = y + 0.5), alpha = 0.25) +
+  theme_void() +
+  guides(fill = FALSE)
+
+
+
+fig <- plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = cases_per_100K_14d[,1],
+  title = list(text = "Cases per 100k Population"),
+  type = "indicator",
+  mode = "gauge+number+delta",
+  # delta = list(reference=52),
+  gauge = list(
+    bar = list(
+      color = "gray"
+    ),
+    axis = list(
+      range = c(0,150),
+      dtick = 10
+    ),
+    steps = list(
+      list(range = c(0,25),color = "lightgreen"),
+      list(range = c(25,75), color = "lightyellow"),
+      list(range = c(75,600), color = "red")
+    )
+  )) 
+fig <- fig %>%
+  layout(margin = list(l=20,r=30))
+
+fig
+```
+
+
+
+In the last 7 days, there were `r sum(tail(data$new_cases,7))` new cases and `r last_7_days_reported_deaths` deaths.
+```{r combined_plot, echo=FALSE}
+ggplotly(combined_plot)  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date"))
+  )
+
+```
+```{r King County Last 14 Day Table, echo=FALSE, message = FALSE}
+king_county_daily_cases <- tibble(Date = format(as.Date(tail(king_county$date,-1)),'%b %d'), `New Cases` = diff(king_county$cases), `New Deaths`=diff(king_county$deaths))
+knitr::kable(king_county_daily_cases %>%
+               tail(14) %>% t(),
+             caption="King County 14 day History")
+
+
+```
+
+# Risk Factors
+
+```{r King County Risk Factors, echo=FALSE, message = FALSE, warning=FALSE }
+risk_data <- tibble(date = data$date,
+              new_cases = data$new_cases,
+              last_14_day_cases = NULL,
+              last_14_day_cases_per_100k_pop = NULL
+         )
+
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -14
+  risk_data$last_14_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>% 
+                                sum(na.rm=TRUE)
+  risk_data$last_14_day_cases_per_100k_pop[i] <- risk_data$last_14_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_14_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_14d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per_100k_pop)) +
+  geom_area(fill="lightgray",aes()) +
+  geom_hline(yintercept=25,linetype="dashed",color="yellow")+
+  geom_hline(yintercept=75,linetype="dashed",color="red") +
+  labs(title="King County 14 Day Risk per 100k population",
+       subtitle="Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.",
+       caption="") +
+  xlab("") +
+  ylab("Cases per 100k population in last 14 days") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+  
+```
+
+## County Level Risk
+
+```{r Washington county map, echo=FALSE, message = FALSE }
+outlist = list()
+
+washington = subset(nytimes,state =='Washington')
+
+#Remove unknown county
+washington <- subset(washington,county != 'Unknown')
+nytimes <- subset(nytimes,county != 'Unknown')
+
+
+for (c in unique(washington$county)) {
+  county_info <-subset(washington,county == c & county != 'Unknown')
+  county_fips = unique(county_info$fips)
+  fooSTATE = as.numeric(substr(county_fips, 1, 2))
+  fooCOUNTY = as.numeric(substr(county_fips, nchar(county_fips)-3+1, nchar(county_fips)))
+  population = subset(county_population,STATE == fooSTATE & COUNTY == fooCOUNTY,select=c('POPESTIMATE2019'),na=0)$POPESTIMATE2019
+  first_case_reported <- min(county_info$date)
+  new_cases =data.frame(date = tail(county_info$date,-1), new_cases = diff(county_info$cases))
+  last_14d_cases <- sum(subset(new_cases,date >= Sys.Date()-14)$new_cases)
+  last_7d_cases <- sum(subset(new_cases,date >= Sys.Date()-7)$new_cases)
+  out <- data.frame(state = unique(county_info$state),
+                    county = unique(county_info$county),
+                    county_fips = county_fips,
+                    region = unique(county_info$fips),
+                    first_case_reported = first_case_reported,
+                    last_14d_cases = last_14d_cases,
+                    last_7d_cases = last_7d_cases,
+                    population = coalesce(population,0),
+                    last_14d_cases_per_100k = coalesce(last_14d_cases / population *100000,0) ,
+                    last_7d_cases_per_100k = coalesce(last_7d_cases / population *100000,0))
+  outlist[[unique(county_info$fips)]] <- out
+}
+
+
+
+metrics = do.call(rbind,outlist)
+
+
+library(choroplethr)
+metrics$value = metrics$last_7d_cases_per_100k
+
+choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k population",num_colors = 4,state_zoom = 'washington')+ scale_fill_brewer(palette=7)  
+
+```
+
+```{r Washington Last 14 Day Table, echo=FALSE, message = FALSE}
+last_14_day_cases <- nytimes %>%
+filter( date >= Sys.Date() - 15) %>%
+group_by(state, county, fips) %>%
+summarise(last_14_days_cases = sum(diff(cases)))
+last_14_day_cases = left_join(last_14_day_cases,county_population,by=c("state"="STNAME","county"= "CTYNAME"))
+last_14_day_cases = subset(last_14_day_cases, select = c("state","county","fips","last_14_days_cases","POPESTIMATE2019"))
+last_14_day_cases$cases_per_100K_14d = last_14_day_cases$last_14_days_cases / last_14_day_cases$POPESTIMATE2019 * 100000
+
+knitr::kable(subset(last_14_day_cases,state=='Washington',select=c('county','last_14_days_cases')),caption="Cases by County, Last 14 Days")
+```
