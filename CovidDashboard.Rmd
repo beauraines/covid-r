@@ -215,6 +215,9 @@ fig <- fig %>%
 fig
 
 ```
+### Last Updated
+
+Last Updated `r Sys.time()`
 
 # Washington State
 
