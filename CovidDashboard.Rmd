@@ -16,6 +16,8 @@ library(zoo)
 library(hrbrthemes)
 library(plotly)
 library(emojifont)
+library(choroplethr)
+
 
 ```
 # King County
@@ -215,7 +217,7 @@ fig <- fig %>%
 fig
 
 ```
-### Last Updated
+### Last Updated {data-height=24px}
 
 Last Updated `r Sys.time()`
 
@@ -302,6 +304,14 @@ county_data %>%
 ```
 
 ## {data-width=250}
+
+### KPI
+```{r state KPI,out.width=2,out.height=2,fig.align="right"}
+source("CumulativeDeathsAndCases.R")
+wa_kpi
+```
+
+
 ### Last 14 Day Cases by County
 ```{r Washington Last 14 Day Table, echo=FALSE, message = FALSE}
 last_14_day_cases <- nytimes %>%
@@ -317,15 +327,11 @@ knitr::kable(subset(last_14_day_cases,state=='Washington',select=c('county','las
 
 
 # United States
-## County Compared to prior 7 days {data-width=650}
-```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"}
-library(choroplethr)
-
+```{r US Data}
 cases_week_over_week <- nytimes %>%
   filter( date >= Sys.Date() - 15 & date <= Sys.Date() - 8) %>%
   group_by(state, county, fips) %>%
   summarise(last_14_days_cases = sum(diff(cases)))
-
 
 cases_week_over_week <- inner_join(cases_week_over_week,
                                    nytimes %>%
@@ -340,14 +346,11 @@ cases_week_over_week$new_case_growth = (cases_week_over_week$last_7_days_cases-c
 
 cases_week_over_week$state_fips = substr(cases_week_over_week$fips,1,nchar(cases_week_over_week$fips)-3)
 
-## Requires region and value for plot
-cases_week_over_week$value = cases_week_over_week$new_case_growth
-cases_week_over_week$region = cases_week_over_week$fips
-
-choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1)
 ```
 
-## State Compared to prior 7 days {data-width=650}
+## {data-width=650}
+
+### State Compared to prior 7 days
 ```{r Case Growth by State, echo=FALSE, message = FALSE, out.width="100%"}
 state_cases_week_over_week <- cases_week_over_week %>%
                                 group_by(state,state_fips) %>%
@@ -360,3 +363,21 @@ choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week C
 
 ```
 
+### County Compared to prior 7 days 
+```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"}
+
+
+## Requires region and value for plot
+cases_week_over_week$value = cases_week_over_week$new_case_growth
+cases_week_over_week$region = cases_week_over_week$fips
+
+choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1)
+```
+
+
+##  {data-width=350}
+### KPI
+```{r US KPI}
+# source("CumulativeDeathsAndCases.R")
+us_kpi
+```
