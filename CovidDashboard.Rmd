@@ -17,7 +17,7 @@ library(hrbrthemes)
 library(plotly)
 library(emojifont)
 library(choroplethr)
-
+# extrafont::loadfonts(quiet=TRUE)
 
 ```
 # King County
@@ -363,17 +363,32 @@ choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week C
 
 ```
 
-### County Compared to prior 7 days 
-```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"}
+<!-- ### County Compared to prior 7 days  -->
+<!-- ```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"} -->
 
 
-## Requires region and value for plot
-cases_week_over_week$value = cases_week_over_week$new_case_growth
-cases_week_over_week$region = cases_week_over_week$fips
+<!-- ## Requires region and value for plot -->
+<!-- cases_week_over_week$value = cases_week_over_week$new_case_growth -->
+<!-- cases_week_over_week$region = cases_week_over_week$fips -->
 
-choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1)
+<!-- choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1) -->
+<!-- ``` -->
+
+### Cumulative US Cases
+```{r Cumulative US Cases,  echo=FALSE, message = FALSE, out.width="100%"}
+nytimes %>%
+  group_by(date) %>%
+  summarise(cumulative_cases = sum(cases), cumulative_deaths = sum(deaths)) %>%
+  ggplot(aes(x=as.Date(date),y=cumulative_cases)) +
+    # geom_point(color="red") + 
+    geom_line(color="red") + 
+    theme_ipsum() +
+    ylab("Cases") + xlab("") +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(1000000),limits = c(0,NA)) +
+    labs(title="Cumulative US Cases",caption="Data sourced from NY Times GitHub")
+
 ```
-
 
 ##  {data-width=350}
 ### KPI
