@@ -1,0 +1,101 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Using [Our World in Data vaccination](https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations) data. The vaccination data is at the state level.
+
+**NB**: it might make sense to switch _all_ my data to this, though I'm not sure I have county level data for all of them.
+
+### Citation
+Mathieu, E., Ritchie, H., Ortiz-Ospina, E. _et al._ A global database of COVID-19 vaccinations. _Nat Hum Behav_ (2021). [https://doi.org/10.1038/s41562-021-01122-8](https://doi.org/10.1038/s41562-021-01122-8)
+
+## Get The Data
+```{r}
+library(tidyverse)
+vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
+  mutate(location = replace(location,location == 'New York State', 'New York'))
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+
+### Vaccination Map by State
+```{r}
+library(choroplethr)
+# library(choroplethrMaps)
+vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated_per_hundred) %>%
+  mutate(location=tolower(location)) %>%
+  rename(region= location,value = people_fully_vaccinated_per_hundred) %>%
+  choroplethr::state_choropleth(title="Vaccinations Rate", legend = "%", num_colors=1) 
+
+```
+Here is a comparison of percent population vaccinated by state over time. I noticed that I had to remove a few _non_ state entities, `r c('United States','Bureau of Prisons','Dept of Defense','Long Term Care','Veterans Health')`
+
+```{r}
+vaccinations %>% 
+  filter( ! location %in% c('United States','Bureau of Prisons','Dept of Defense','Long Term Care','Veterans Health','Indian Health Svc')) %>%
+  select(date,location,people_fully_vaccinated_per_hundred) %>%  
+  ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() + facet_wrap(~location)
+```
+
+### How does vaccination rate compare with new cases
+
+I'm not thinking that the vaccination rate corresponds to slowing the spread of the virus...
+
+```{r}
+v_rate <- vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated,people_fully_vaccinated_per_hundred)
+
+cases <- nytimes %>%
+  filter(date == max(date)) %>%
+  group_by(state) %>%
+  summarise(cumulative_cases = sum(cases),population = sum(population))
+
+state_population <- county_population %>%
+  group_by(STNAME) %>%
+  summarise(population=sum(POPESTIMATE2019))
+
+df <- inner_join(v_rate,cases,c("location" = "state"))
+
+ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=cumulative_cases)) +
+    geom_point() + 
+   geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+  geom_smooth()+
+   xlab("Percent of state fully vaccinated") + 
+  ylab("Last 7 days cases per 100k population")
+
+ggplot(df,aes(x=people_fully_vaccinated,y=cumulative_cases)) +
+    geom_point() + 
+  geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+  geom_smooth()+
+  xlab("Fully vaccinated population") + 
+  ylab("Cumulative Cases")
+
+df <-inner_join(v_rate,state_cases_week_over_week,c("location"="state")) %>%
+      left_join(state_population,c("location" = "STNAME"))
+
+ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/population*100000))) +
+  geom_point() + 
+  geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+  geom_smooth()+
+  xlab("Percent of state fully vaccinated") + 
+  ylab("Last 7 days cases per 100k population")
+
+ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=((last_7_days_cases-last_14_days_cases)/last_14_days_cases))) +
+  geom_point(shape=1) + 
+  geom_text(aes(label=location),hjust=1, vjust=1,size=2) +
+  geom_smooth() +
+  xlab("Percent of state fully vaccinated") + 
+  ylab("Week over week case growth")
+
+
+```
+
