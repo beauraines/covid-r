@@ -85,6 +85,10 @@ source("hospitalizations.R", local = knitr::knit_global())
 beds
 ```
 
+## Notice
+
+This report continues to be updated, but is no longer under active development. Please refer to the [Covid Dashboard](CovidDashboard.html) as it is the recipient of active development.
+
 
 ## King County Covid Cases
 
