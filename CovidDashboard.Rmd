@@ -186,9 +186,16 @@ ggplot(df, aes(x, y, height = h, width = w, label = info)) +
 
 
 ```{r guage, echo=FALSE, message = FALSE, warning=FALSE, fig.height=2, fig.align='left'}
+value <- cases_per_100K_14d[,1]
+max_range <-  case_when(
+  value < 100 ~ 100,
+  value <= 250 ~ 250,
+  TRUE ~ 500
+) 
+
 fig <- plot_ly(
   domain = list(x = c(0, 1), y = c(0, 1)),
-  value = cases_per_100K_14d[,1],
+  value = value,
   title = list(text = "Cases per 100k Population"),
   type = "indicator",
   mode = "gauge+number+delta",
@@ -202,8 +209,8 @@ fig <- plot_ly(
       color = "gray"
     ),
     axis = list(
-      range = c(0,150),
-      dtick = 10
+      range = c(0,max_range),
+      dtick = max_range/10
     ),
     steps = list(
       list(range = c(0,25),color = "lightgreen"),
