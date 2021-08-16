@@ -21,5 +21,5 @@ COPY CovidDashboard.Rmd .
 COPY CumulativeDeathsAndCases.R .
 
 FROM dashboard
-RUN Rscript -e "rmarkdown::render('CovidDashboard.Rmd')"
+CMD Rscript -e "rmarkdown::render('CovidDashboard.Rmd')"
 
