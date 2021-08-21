@@ -282,45 +282,55 @@ choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k populat
 
 ```
 
-### County New Case History
-```{r County New Case History, echo=FALSE,warning=FALSE, message = FALSE, fig.width=10, fig.height=6, fig.align = "center"}
-library(hrbrthemes)
 
-#Remove unknown county
-washington <- subset(washington,county != 'Unknown')
-nytimes <- subset(nytimes,county != 'Unknown')
+### Washington Vaccinations
+```{r Washington Daily Vacinations}
+daily_vax_plot <- vaccinations %>% 
+  filter( location %in% c('Washington')) %>%
+  select(date,location,daily_vaccinations) %>%  
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() +
+  xlab("") + ylab("Daiily Vaccinations") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
 
-county_data = tibble()
+daily_percent_vax_plot <- vaccinations %>% 
+  filter( location %in% c('Washington')) %>%
+  select(date,location,people_fully_vaccinated_per_hundred) %>%  
+  ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() +
+  xlab("Date") + ylab("Percent Fully Vaccinated") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
 
-for (c in unique(washington$county)) {
-  county_info <-subset(washington,county == c & county != 'Unknown')
-  county_fips = unique(county_info$fips)
-  county_data <- bind_rows(county_data,tibble(state ='Washington',
-                              county = c,
-                              date = tail(county_info$date,-1),
-                              new_cases = diff(county_info$cases),
-                              new_deaths = diff(county_info$deaths) )
-  )
-}
+gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
 
-county_data$date <- as.Date(county_data$date)
-
-county_data %>% 
-  # filter(date >='2021-01-01') %>%
-  ggplot(aes(x=date,y=new_cases))+
-  geom_line(group=1) +
-  facet_wrap(~county,scales = "free") +
-  labs(x="", y="",
-       title="New Cases by county") + 
-  theme_ipsum()
 ```
 
 ## {data-width=250}
 
-### KPI
-```{r state KPI,out.width=2,out.height=2,fig.align="right"}
+```{r state KPI data, include=FALSE}
 source("CumulativeDeathsAndCases.R")
-wa_kpi
+```
+
+### Cumulative Cases
+```{r}
+wa_cases %>%
+  valueBox(caption='Cumulative Cases',icon=emoji("nauseated_face"))
+```
+
+### Cumulative Deaths
+```{r}
+wa_deaths %>%
+  valueBox(caption='Cumulative Deaths',icon='fa-skull')
+```
+
+### Vaccination Rate
+```{r}
+v_rate <- vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated,people_fully_vaccinated_per_hundred)
+
+v_rate %>% 
+  filter(location %in% c('Washington')) %>%
+  select(people_fully_vaccinated_per_hundred) %>%
+  valueBox(caption='Vaccination Rate',icon='fa-syringe')
 ```
 
 
@@ -406,8 +416,6 @@ nytimes %>%
 
 ### Vaccinations 
 ```{r Vaccination Rates by State, echo=FALSE, message = FALSE}
-vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
-  mutate(location = replace(location,location == 'New York State', 'New York'))
 vaccinations %>%
   filter(date == max(date)) %>%
   select(location,people_fully_vaccinated_per_hundred) %>%
