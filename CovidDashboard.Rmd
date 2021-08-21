@@ -297,7 +297,8 @@ daily_percent_vax_plot <- vaccinations %>%
   select(date,location,people_fully_vaccinated_per_hundred) %>%  
   ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() +
   xlab("Date") + ylab("Percent Fully Vaccinated") +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  ylim(0,100)
 
 gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
 
