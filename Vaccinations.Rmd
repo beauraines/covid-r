@@ -36,6 +36,22 @@ vaccinations %>%
   choroplethr::state_choropleth(title="Vaccinations Rate", legend = "%", num_colors=1) 
 
 ```
+### Percent of population vaccinated
+
+```{r}
+
+v_rate <- vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated,people_fully_vaccinated_per_hundred)
+
+v_rate %>% filter(location %in% c('Washington','California','United States'))
+
+
+```
+
+
+### Vaccinations over time
+
 Here is a comparison of percent population vaccinated by state over time. I noticed that I had to remove a few _non_ state entities, `r c('United States','Bureau of Prisons','Dept of Defense','Long Term Care','Veterans Health')`
 
 ```{r}
@@ -44,6 +60,28 @@ vaccinations %>%
   select(date,location,people_fully_vaccinated_per_hundred) %>%  
   ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() + facet_wrap(~location)
 ```
+
+Simple plots of daily vaccinations.
+
+```{r}
+vaccinations %>% 
+  filter( ! location %in% c('United States','Bureau of Prisons','Dept of Defense','Long Term Care','Veterans Health','Indian Health Svc')) %>%
+  select(date,location,daily_vaccinations) %>%  
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() + facet_wrap(~location)
+
+vaccinations %>% 
+  filter( location %in% c('Washington')) %>%
+  select(date,location,daily_vaccinations) %>%  
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() + facet_wrap(~location)
+
+vaccinations %>% 
+  filter( location %in% c('United States')) %>%
+  select(date,location,daily_vaccinations) %>%  
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() + facet_wrap(~location)
+
+```
+
+
 
 ### How does vaccination rate compare with new cases
 
