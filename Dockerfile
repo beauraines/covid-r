@@ -15,6 +15,7 @@ RUN install2.r --error  plotly
 RUN install2.r --error  emojifont
 RUN install2.r --error  choroplethr
 RUN install2.r --error  choroplethrMaps
+RUN install2.r --error  AzureStor
 RUN R -e "hrbrthemes::import_roboto_condensed()" && \
   cp /usr/local/lib/R/site-library/hrbrthemes/fonts/roboto-condensed/*.ttf /usr/local/share/fonts/.
 
