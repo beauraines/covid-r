@@ -22,8 +22,8 @@ RUN R -e "hrbrthemes::import_roboto_condensed()" && \
   cp /usr/local/lib/R/site-library/hrbrthemes/fonts/roboto-condensed/*.ttf /usr/local/share/fonts/.
 
 FROM r_libs as dashboard
-COPY CovidDashboard.Rmd .
-COPY CumulativeDeathsAndCases.R .
+RUN wget https://raw.githubusercontent.com/beauraines/covid-r/main/CovidDashboard.Rmd
+RUN wget https://raw.githubusercontent.com/beauraines/covid-r/main/CumulativeDeathsAndCases.R
 
 FROM dashboard
 CMD Rscript -e "rmarkdown::render('CovidDashboard.Rmd')"
