@@ -146,9 +146,9 @@ ggplotly(risk_plot)  %>%
 KPI {data-width=350}
 -----------------------------------------------------------------------
 
-### Yesterday KPI
+### Yesterday New Cases
 
-```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left'}
+```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left', include=FALSE}
 yesterday_new_cases <- tail(data$new_cases,1)
 yesterday_deaths <-  tail(data$new_deaths,1)
 
@@ -184,6 +184,17 @@ ggplot(df, aes(x, y, height = h, width = w, label = info)) +
 
 ```
 
+```{r}
+yesterday_new_cases %>%
+  valueBox(caption='Yesterday New Cases',icon=emoji("nauseated_face"))
+```
+
+### Yesterday Deaths
+
+```{r}
+yesterday_deaths %>%
+  valueBox(caption='Yesterday New Deaths',icon=emoji("fa-skull"))
+```
 
 ### Community Risk
 
