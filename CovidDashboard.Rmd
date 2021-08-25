@@ -186,14 +186,14 @@ ggplot(df, aes(x, y, height = h, width = w, label = info)) +
 
 ```{r}
 yesterday_new_cases %>%
-  valueBox(caption='Yesterday New Cases',icon=emoji("nauseated_face"))
+  valueBox(caption='Yesterday New Cases',icon="nauseated_face")
 ```
 
 ### Yesterday Deaths
 
 ```{r}
 yesterday_deaths %>%
-  valueBox(caption='Yesterday New Deaths',icon=emoji("fa-skull"))
+  valueBox(caption='Yesterday New Deaths',icon='fa-skull')
 ```
 
 ### Community Risk
