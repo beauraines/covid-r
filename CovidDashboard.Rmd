@@ -338,13 +338,13 @@ source("CumulativeDeathsAndCases.R")
 
 ### Cumulative Cases
 ```{r}
-wa_cases %>%
+format(wa_cases,big.mark = ",") %>%
   valueBox(caption='Cumulative Cases',icon=emoji("nauseated_face"))
 ```
 
 ### Cumulative Deaths
 ```{r}
-wa_deaths %>%
+format(wa_deaths,big.mark = ",") %>%
   valueBox(caption='Cumulative Deaths',icon='fa-skull')
 ```
 
