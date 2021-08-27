@@ -360,6 +360,7 @@ v_rate <- vaccinations %>%
 v_rate %>% 
   filter(location %in% c('Washington')) %>%
   select(people_fully_vaccinated_per_hundred) %>%
+  str_c("%") %>%
   valueBox(caption='Vaccination Rate',icon='fa-syringe')
 ```
 
