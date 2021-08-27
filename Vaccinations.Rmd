@@ -108,7 +108,7 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=cumulative_cases)) +
    geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
   geom_smooth()+
    xlab("Percent of state fully vaccinated") + 
-  ylab("Last 7 days cases per 100k population")
+  ylab("Cumulative Cases")
 
 ggplot(df,aes(x=people_fully_vaccinated,y=cumulative_cases)) +
     geom_point() + 
