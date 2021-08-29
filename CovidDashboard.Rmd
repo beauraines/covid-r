@@ -223,7 +223,7 @@ hospitalizations <-tibble(hospitalizations)
 hospitalizations_wa = subset(hospitalizations,state == 'WA')
 ```
 
-```{r}
+```{r Washington Hospital Bed Utilization}
 hospitalizations_wa %>%
   filter(date == max(date)) %>%
   select(inpatient_beds_utilization) %>% 
@@ -233,7 +233,7 @@ hospitalizations_wa %>%
 ```
 
 ### ICU Beds
-```{r}
+```{r Washington ICU Bed Utilization}
 hospitalizations_wa %>%
   filter(date == max(date)) %>%
   select(adult_icu_bed_utilization)%>% 
