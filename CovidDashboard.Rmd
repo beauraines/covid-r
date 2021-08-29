@@ -214,6 +214,35 @@ yesterday_deaths %>%
   valueBox(caption='Yesterday New Deaths',icon='fa-skull')
 ```
 
+### Hospitalizations
+```{r Hospitaliztion Data}
+library(RSocrata)
+hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
+hospitalizations$date = as.Date(hospitalizations$date)
+hospitalizations <-tibble(hospitalizations)
+hospitalizations_wa = subset(hospitalizations,state == 'WA')
+```
+
+```{r}
+hospitalizations_wa %>%
+  filter(date == max(date)) %>%
+  select(inpatient_beds_utilization) %>% 
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Washington Inpatient Beds Utilized',icon='fa-bed')
+```
+
+### ICU Beds
+```{r}
+hospitalizations_wa %>%
+  filter(date == max(date)) %>%
+  select(adult_icu_bed_utilization)%>% 
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Washington ICU Beds Utilized',icon='fa-bed')
+```
+
+
 ### Community Risk
 
 <p style="text-align:center;font-size:x-large">`r risk`</p>
