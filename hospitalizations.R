@@ -186,3 +186,24 @@ ggplot(aes(x=date,y=previous_day_addmissions))+
   labs(title="Previous Days Hospitalizations",caption="Includes both adult and pediatric admissions. Data from COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries https://healthdata.gov/resource/g62h-syeh") +
   theme_ft_rc() 
 
+### Currently Hospitalized by State
+hospitalizations %>%
+  filter(date == max(date)) %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  
+### Currently Hospitalized US
+hospitalizations %>%
+  filter(date == max(date)) %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  summarise(hospitalized = sum(hospitalized))
+

@@ -376,6 +376,24 @@ hospitalizations <-tibble(hospitalizations)
 hospitalizations_wa = subset(hospitalizations,state == 'WA')
 ```
 
+### Current WA Hospitalizations
+```{r Current Hospitalizations Washington}
+hospitalizations %>%
+  filter(date == max(date),state =='WA') %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  summarise(hospitalized = sum(hospitalized)) %>%
+  pull() %>% 
+  scales::comma() %>%
+  valueBox(caption='Currently Hospitalized',icon="fa-bed")
+  
+```
+
+### Washington Hospital Bed Utilization
 ```{r Washington Hospital Bed Utilization}
 hospitalizations_wa %>%
   filter(date == max(date)) %>%
@@ -511,6 +529,24 @@ si_number(us_cases,3) %>%
 si_number(us_deaths,3) %>%
   valueBox(caption='Cumulative Deaths',icon="fa-skull")
 ```
+
+### Currently Hospitalized
+```{r Current Hospitalizations}
+hospitalizations %>%
+  filter(date == max(date)) %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  summarise(hospitalized = sum(hospitalized)) %>%
+  pull() %>% 
+  scales::comma() %>%
+  valueBox(caption='Currently Hospticalized',icon="fa-bed")
+  
+```
+
 
 ### Yesterday's Hospitalizations
 ```{r Yesterdays Hospitalizations KPI}
