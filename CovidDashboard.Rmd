@@ -367,7 +367,7 @@ v_rate %>%
   valueBox(caption='Vaccination Rate',icon='fa-syringe')
 ```
 
-### WA Hospitalizations
+### Current WA Hospitalizations
 ```{r Hospitaliztion Data}
 library(RSocrata)
 hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
@@ -376,7 +376,6 @@ hospitalizations <-tibble(hospitalizations)
 hospitalizations_wa = subset(hospitalizations,state == 'WA')
 ```
 
-### Current WA Hospitalizations
 ```{r Current Hospitalizations Washington}
 hospitalizations %>%
   filter(date == max(date),state =='WA') %>%
@@ -530,6 +529,21 @@ si_number(us_deaths,3) %>%
   valueBox(caption='Cumulative Deaths',icon="fa-skull")
 ```
 
+### Vaccination Rate
+```{r}
+vaccinations %>%
+  filter(date == max(date)) %>%
+  select(date,location,people_fully_vaccinated,people_fully_vaccinated_per_hundred) %>%
+  mutate(people_not_vaccinated = people_fully_vaccinated * (100- people_fully_vaccinated_per_hundred)/100) %>%
+  mutate(people = people_not_vaccinated + people_fully_vaccinated) %>%
+  summarise(vax = sum(people_fully_vaccinated,na.rm = TRUE), total_pop = sum(people,na.rm = TRUE)) %>%
+  summarise(people_fully_vaccinated_per_hundred = vax/total_pop) %>%
+  select(people_fully_vaccinated_per_hundred) %>%
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Vaccination Rate',icon='fa-syringe')
+```
+
 ### Currently Hospitalized
 ```{r Current Hospitalizations}
 hospitalizations %>%
@@ -543,7 +557,7 @@ hospitalizations %>%
   summarise(hospitalized = sum(hospitalized)) %>%
   pull() %>% 
   scales::comma() %>%
-  valueBox(caption='Currently Hospticalized',icon="fa-bed")
+  valueBox(caption='Currently Hospitalized',icon="fa-bed")
   
 ```
 
