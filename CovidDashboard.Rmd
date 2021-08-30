@@ -204,7 +204,7 @@ ggplot(df, aes(x, y, height = h, width = w, label = info)) +
 
 ```{r}
 yesterday_new_cases %>%
-  valueBox(caption='Yesterday New Cases',icon="nauseated_face")
+  valueBox(caption='Yesterday New Cases',icon="fa-frown")
 ```
 
 ### Yesterday Deaths
@@ -345,7 +345,7 @@ source("CumulativeDeathsAndCases.R")
 ### Cumulative Cases
 ```{r}
 format(wa_cases,big.mark = ",") %>%
-  valueBox(caption='Cumulative Cases',icon=emoji("nauseated_face"))
+  valueBox(caption='Cumulative Cases',icon="fa-frown")
 ```
 
 ### Cumulative Deaths
@@ -503,7 +503,7 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/populat
 ### Cumulative US Cases
 ```{r}
 si_number(us_cases,3) %>%
-  valueBox(caption='Cumulative Cases',icon="fa-disease")
+  valueBox(caption='Cumulative Cases',icon="fa-frown")
 ```
 
 ### Cumulative US Deaths
