@@ -2,7 +2,7 @@ library(RSocrata)
 library(tidyverse)
 library(lubridate)
 library(hrbrthemes)
-# geofacet
+library(geofacet)
 hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
 hospitalizations$date = as.Date(hospitalizations$date)
 hospitalizations <-tibble(hospitalizations)
