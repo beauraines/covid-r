@@ -82,7 +82,7 @@ combined_plot
 ## Source runs, but doesn't display the plots.
 # it seems you have to create them as an object then display it afterwards
 source("hospitalizations.R", local = knitr::knit_global())
-beds
+# beds
 ```
 
 ## Notice
