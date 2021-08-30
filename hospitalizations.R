@@ -104,7 +104,7 @@ hospitalizations_wa %>%
                values_to = "beds",
                names_prefix = "inpatient_") %>%
   ggplot(aes(x=date,y=beds,color=measure)) +
-    geom_line
+    geom_line()
 
 hospitalizations_wa %>%
   filter(date>='2021-01-01' & inpatient_beds_coverage > 98) %>%
