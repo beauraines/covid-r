@@ -19,6 +19,33 @@ library(emojifont)
 library(choroplethr)
 # extrafont::loadfonts(quiet=TRUE)
 
+si_number = function(x, digits) {
+
+    compress = function(x, n) {
+        signif(x * 10^(-n), digits)
+    }
+
+    case_when(
+        x >= 1e6   ~ paste0(compress(x, 6), "M"),
+        x >= 1000  ~ paste0(compress(x, 3), "k"),
+        x >= 1     ~ as.character(compress(x, 0)),
+        x >= 0.001 ~ paste0(compress(x, -3), "m"),
+        x >= 1e-6  ~ paste0(compress(x, -6), "u")
+    )
+}
+
+```
+
+```{r data preparation, include=FALSE}
+fips = read.csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", header=FALSE)
+nytimes= read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv?raw=true")
+king_county = subset(nytimes,state =='Washington' & county == "King")
+county_population = read.csv("https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv")
+vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
+  mutate(location = replace(location,location == 'New York State', 'New York'))
+state_population <- county_population %>%
+  group_by(STNAME) %>%
+  summarise(population=sum(POPESTIMATE2019))
 ```
 # King County
 
@@ -28,10 +55,6 @@ Charts {data-width=650}
 ### New Cases
 
 ```{r 14_day_data, include = FALSE}
-fips = read.csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", header=FALSE)
-nytimes= read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv?raw=true")
-king_county = subset(nytimes,state =='Washington' & county == "King")
-county_population = read.csv("https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv")
 
 data <- data.frame(date = as.Date(tail(king_county$date,-1)), new_cases = diff(king_county$cases), new_deaths = diff(king_county$deaths))
 ## missing very very first day
@@ -141,9 +164,9 @@ ggplotly(risk_plot)  %>%
 KPI {data-width=350}
 -----------------------------------------------------------------------
 
-### Yesterday KPI
+### Yesterday New Cases
 
-```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left'}
+```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left', include=FALSE}
 yesterday_new_cases <- tail(data$new_cases,1)
 yesterday_deaths <-  tail(data$new_deaths,1)
 
@@ -178,6 +201,20 @@ ggplot(df, aes(x, y, height = h, width = w, label = info)) +
   guides(fill = FALSE)
 
 ```
+
+```{r}
+yesterday_new_cases %>%
+  valueBox(caption='Yesterday New Cases',icon="fa-frown")
+```
+
+### Yesterday Deaths
+
+```{r}
+yesterday_deaths %>%
+  valueBox(caption='Yesterday New Deaths',icon='fa-skull')
+```
+
+
 
 
 ### Community Risk
@@ -277,47 +314,103 @@ choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k populat
 
 ```
 
-### County New Case History
-```{r County New Case History, echo=FALSE,warning=FALSE, message = FALSE, fig.width=10, fig.height=6, fig.align = "center"}
-library(hrbrthemes)
 
-#Remove unknown county
-washington <- subset(washington,county != 'Unknown')
-nytimes <- subset(nytimes,county != 'Unknown')
+### Washington Vaccinations
+```{r Washington Daily Vacinations}
+daily_vax_plot <- vaccinations %>% 
+  filter( location %in% c('Washington')) %>%
+  select(date,location,daily_vaccinations) %>%  
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() +
+  xlab("") + ylab("Daiily Vaccinations") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
 
-county_data = tibble()
+daily_percent_vax_plot <- vaccinations %>% 
+  filter( location %in% c('Washington')) %>%
+  select(date,location,people_fully_vaccinated_per_hundred) %>%  
+  ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() +
+  xlab("Date") + ylab("Percent Fully Vaccinated") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  ylim(0,100)
 
-for (c in unique(washington$county)) {
-  county_info <-subset(washington,county == c & county != 'Unknown')
-  county_fips = unique(county_info$fips)
-  county_data <- bind_rows(county_data,tibble(state ='Washington',
-                              county = c,
-                              date = tail(county_info$date,-1),
-                              new_cases = diff(county_info$cases),
-                              new_deaths = diff(county_info$deaths) )
-  )
-}
+gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
 
-county_data$date <- as.Date(county_data$date)
-
-county_data %>% 
-  # filter(date >='2021-01-01') %>%
-  ggplot(aes(x=date,y=new_cases))+
-  geom_line(group=1) +
-  facet_wrap(~county,scales = "free") +
-  labs(x="", y="",
-       title="New Cases by county") + 
-  theme_ipsum()
 ```
 
 ## {data-width=250}
 
-### KPI
-```{r state KPI,out.width=2,out.height=2,fig.align="right"}
+```{r state KPI data, include=FALSE}
 source("CumulativeDeathsAndCases.R")
-wa_kpi
 ```
 
+### Cumulative Cases
+```{r}
+format(wa_cases,big.mark = ",") %>%
+  valueBox(caption='Cumulative Cases',icon="fa-frown")
+```
+
+### Cumulative Deaths
+```{r}
+format(wa_deaths,big.mark = ",") %>%
+  valueBox(caption='Cumulative Deaths',icon='fa-skull')
+```
+
+### Vaccination Rate
+```{r}
+v_rate <- vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated,people_fully_vaccinated_per_hundred)
+
+v_rate %>% 
+  filter(location %in% c('Washington')) %>%
+  select(people_fully_vaccinated_per_hundred) %>%
+  str_c("%") %>%
+  valueBox(caption='Vaccination Rate',icon='fa-syringe')
+```
+
+### Current WA Hospitalizations
+```{r Hospitaliztion Data}
+library(RSocrata)
+hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
+hospitalizations$date = as.Date(hospitalizations$date)
+hospitalizations <-tibble(hospitalizations)
+hospitalizations_wa = subset(hospitalizations,state == 'WA')
+```
+
+```{r Current Hospitalizations Washington}
+hospitalizations %>%
+  filter(date == max(date),state =='WA') %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  summarise(hospitalized = sum(hospitalized)) %>%
+  pull() %>% 
+  scales::comma() %>%
+  valueBox(caption='Currently Hospitalized',icon="fa-bed")
+  
+```
+
+### Washington Hospital Bed Utilization
+```{r Washington Hospital Bed Utilization}
+hospitalizations_wa %>%
+  filter(date == max(date)) %>%
+  select(inpatient_beds_utilization) %>% 
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Washington Inpatient Beds Utilized',icon='fa-bed')
+```
+
+### ICU Beds
+```{r Washington ICU Bed Utilization}
+hospitalizations_wa %>%
+  filter(date == max(date)) %>%
+  select(adult_icu_bed_utilization)%>% 
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Washington ICU Beds Utilized',icon='fa-bed')
+```
 
 ### Last 14 Day Cases by County
 ```{r Washington Last 14 Day Table, echo=FALSE, message = FALSE}
@@ -401,8 +494,6 @@ nytimes %>%
 
 ### Vaccinations 
 ```{r Vaccination Rates by State, echo=FALSE, message = FALSE}
-vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
-  mutate(location = replace(location,location == 'New York State', 'New York'))
 vaccinations %>%
   filter(date == max(date)) %>%
   select(location,people_fully_vaccinated_per_hundred) %>%
@@ -411,14 +502,78 @@ vaccinations %>%
   choroplethr::state_choropleth(title="Vaccinations Rate", legend = "%", num_colors=1) 
 ```
 
-### Placeholder
+### Impact of Vaccination on Community Risk
+```{r warning=FALSE}
+df <-inner_join(v_rate,state_cases_week_over_week,c("location"="state")) %>%
+      left_join(state_population,c("location" = "STNAME"))
+
+ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/population*100000))) +
+  geom_point() + 
+  geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+  geom_smooth()+
+  xlab("Percent of state fully vaccinated") + 
+  ylab("Last 7 days cases per 100k population")
+```
 
 ## {data-width=350}
-### KPI
-```{r US KPI}
-# source("CumulativeDeathsAndCases.R")
-us_kpi
+
+### Cumulative US Cases
+```{r}
+si_number(us_cases,3) %>%
+  valueBox(caption='Cumulative Cases',icon="fa-frown")
 ```
+
+### Cumulative US Deaths
+```{r}
+si_number(us_deaths,3) %>%
+  valueBox(caption='Cumulative Deaths',icon="fa-skull")
+```
+
+### Vaccination Rate
+```{r}
+vaccinations %>%
+  filter(date == max(date)) %>%
+  select(date,location,people_fully_vaccinated,people_fully_vaccinated_per_hundred) %>%
+  mutate(people_not_vaccinated = people_fully_vaccinated * (100- people_fully_vaccinated_per_hundred)/100) %>%
+  mutate(people = people_not_vaccinated + people_fully_vaccinated) %>%
+  summarise(vax = sum(people_fully_vaccinated,na.rm = TRUE), total_pop = sum(people,na.rm = TRUE)) %>%
+  summarise(people_fully_vaccinated_per_hundred = vax/total_pop) %>%
+  select(people_fully_vaccinated_per_hundred) %>%
+  pull() %>% 
+  scales::percent(accuracy=.1) %>%
+  valueBox(caption='Vaccination Rate',icon='fa-syringe')
+```
+
+### Currently Hospitalized
+```{r Current Hospitalizations}
+hospitalizations %>%
+  filter(date == max(date)) %>%
+  select(state,
+         date,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  summarise(hospitalized = sum(hospitalized)) %>%
+  pull() %>% 
+  scales::comma() %>%
+  valueBox(caption='Currently Hospitalized',icon="fa-bed")
+  
+```
+
+
+### Yesterday's Hospitalizations
+```{r Yesterdays Hospitalizations KPI}
+hospitalizations %>%
+  filter(date == max(date)) %>%
+  select(previous_day_admission_adult_covid_confirmed,previous_day_admission_pediatric_covid_confirmed)%>%
+  summarise(previous_day_addmissions = sum(previous_day_admission_adult_covid_confirmed + previous_day_admission_pediatric_covid_confirmed)) %>%
+  pull() %>% 
+  scales::comma() %>%
+  valueBox(caption='Yesterday\'s Hospitalizations',icon="fa-bed")
+
+```
+
 
 # Data Sources
 
@@ -435,3 +590,8 @@ Mathieu, E., Ritchie, H., Ortiz-Ospina, E. _et al._ A global database of COVID-1
 United States Census Bureau, State and Conty FIPS identifiers. [https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt](https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt)
 
 United States Census Bureau, County Population Projections. [https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv](https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv)
+
+**Hospitalization Data**
+
+[COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh), https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
+

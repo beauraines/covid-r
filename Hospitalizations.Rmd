@@ -1,0 +1,94 @@
+---
+title: "Hospitalizations"
+author: "Beau Raines"
+date: "8/21/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r data, echo=TRUE, message=FALSE, warning=FALSE}
+library(RSocrata)
+library(tidyverse)
+hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
+hospitalizations$date = as.Date(hospitalizations$date)
+hospitalizations <-tibble(hospitalizations)
+hospitalizations_wa = subset(hospitalizations,state == 'WA')
+```
+
+## Hospitalization Data
+
+Reasonable data collection took time.
+
+```{r echo=FALSE}
+
+ggplot(hospitalizations_wa)+
+  geom_line(aes(x=date,y=inpatient_beds_coverage))
+
+
+
+ggplot(hospitalizations_wa)+
+  geom_line(aes(x=date,y=inpatient_beds))
+```
+
+Hospitalization bed utilization is increasing
+```{r echo=FALSE}
+ggplot(hospitalizations_wa)+
+  geom_line(aes(x=date,y=inpatient_beds_utilization)) +
+     geom_smooth(aes(x=date,y=inpatient_beds_utilization))
+```
+
+```{r echo=FALSE}
+ggplot(hospitalizations_wa)+
+     #geom_line(aes(x=date,y=total_adult_patients_hospitalized_confirmed_and_suspected_covid))+
+     geom_line(aes(x=date,y=inpatient_bed_covid_utilization)) 
+
+ggplot(hospitalizations_wa)+
+  geom_line(aes(x=date,y=inpatient_bed_covid_utilization)) + 
+  geom_line(aes(x=date,y=inpatient_beds_utilization))
+```
+
+
+```{r echo=FALSE}
+hospitalizations_wa %>%
+  filter(date == max(date)) %>%
+  select(date,
+         inpatient_beds,
+         inpatient_beds_used,
+         inpatient_beds_utilization,
+         inpatient_bed_covid_utilization,
+         percent_of_inpatients_with_covid,
+         staffed_adult_icu_bed_occupancy,
+         total_staffed_adult_icu_beds,
+         staffed_icu_adult_patients_confirmed_and_suspected_covid,
+         total_adult_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  knitr::kable()
+```
+## ICU Utilization
+
+ICU beds are highly utilized, around 75% and but 1 in 3 beds is occupied by confirmed or suspected covid case
+
+```{r echo=FALSE}
+ggplot(hospitalizations_wa)+
+  geom_area(aes(x=date,y=staffed_adult_icu_bed_occupancy/total_staffed_adult_icu_beds),fill="lightblue",na.rm = TRUE) +
+  geom_area(aes(x=date,y=staffed_icu_adult_patients_confirmed_and_suspected_covid/total_staffed_adult_icu_beds),fill="red",na.rm = TRUE) +
+  ylab("Percent ICU Bed Utilization") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  ylim(0,1) 
+```
+
+## Deaths
+```{r echo=FALSE}
+ggplot(hospitalizations_wa)+
+  #geom_line(aes(x=date,y=total_adult_patients_hospitalized_confirmed_and_suspected_covid))+
+  geom_line(aes(x=date,y=deaths_covid))
+
+last_7_days_reported_deaths = sum(subset(hospitalizations_wa,date >= Sys.Date()-7,select=c(date,deaths_covid))$deaths_covid)
+```
+
+There have been `r last_7_days_reported_deaths` deaths in Washington state reported in the last 7 days.
