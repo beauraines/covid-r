@@ -22,9 +22,14 @@ RUN R -e "hrbrthemes::import_roboto_condensed()" && \
   cp /usr/local/lib/R/site-library/hrbrthemes/fonts/roboto-condensed/*.ttf /usr/local/share/fonts/.
 
 FROM r_libs as dashboard
-RUN wget https://raw.githubusercontent.com/beauraines/covid-r/main/CovidDashboard.Rmd
-RUN wget https://raw.githubusercontent.com/beauraines/covid-r/main/CumulativeDeathsAndCases.R
+COPY processDashboard.sh .
+COPY upload.R .
 
 FROM dashboard
-CMD Rscript -e "rmarkdown::render('CovidDashboard.Rmd')"
+ARG AZURE_STORAGE_ACCOUNT
+ARG AZURE_STORAGE_KEY
+ENV AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT}
+ENV AZURE_STORAGE_KEY=${AZURE_STORAGE_KEY}
+CMD /bin/bash processDashboard.sh
+
 
