@@ -517,6 +517,38 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/populat
 
 ## {data-width=350}
 
+```{r US by Day Data}
+us_by_day <- nytimes %>%
+  group_by(date) %>%
+  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
+  arrange(date) %>%
+  mutate(
+    new_cases = cases - lag(cases,default=0,),
+    new_deaths = deaths -lag(deaths,default=0)
+  )
+```
+### new US cases by day
+
+```{r}
+us_by_day %>%
+  filter(date == max(date)) %>%
+  pull(new_cases) %>%
+  scales::comma() %>%
+  valueBox(caption='Yesterday New Cases',icon="fa-frown")
+```
+
+
+### new US Deaths by day
+
+```{r}
+us_by_day %>%
+  filter(date == max(date)) %>%
+  pull(new_deaths) %>%
+  scales::comma() %>%
+  valueBox(caption='Yesterday New Deaths',icon="fa-skull")
+```
+
+
 ### Cumulative US Cases
 ```{r}
 si_number(us_cases,3) %>%
