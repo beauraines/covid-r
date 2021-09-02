@@ -161,6 +161,45 @@ ggplotly(risk_plot)  %>%
 ```
 
 
+
+Charts Column 2
+---------------
+
+### Daily Deaths
+```{r Daily Deaths, message=FALSE, warning=FALSE}
+library(runner)
+
+king_county_tibble <- king_county %>%
+  tibble() %>%
+  mutate(
+    date = lubridate::ymd(date),
+    new_cases = cases - lag(cases,default=0),
+    new_deaths = deaths -lag(deaths,default=0)
+  )
+
+(king_county_tibble %>%
+  mutate(rolling_7_day_deaths = mean_run(new_deaths,k=7)) %>%
+  ggplot()  + 
+  # geom_smooth() + 
+  geom_bar(aes(x=date,y=new_deaths),stat = "identity",fill="#FF9999", colour="#FF9999") +
+  geom_line(aes(x=date,y=rolling_7_day_deaths)) +
+  ylim(0,NA) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Deaths") +
+  labs(title="King County Covid-19 Deaths",caption="Data sourced from NY Times GitHub, does not display massive data correction in December") +
+  theme_ipsum()
+  ) %>%
+  ggplotly()  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date"))
+  )
+
+```
+
+### Placeholder
+
+
 KPI {data-width=350}
 -----------------------------------------------------------------------
 
@@ -233,7 +272,7 @@ max_range <-  case_when(
 fig <- plot_ly(
   domain = list(x = c(0, 1), y = c(0, 1)),
   value = value,
-  title = list(text = "Cases per 100k Population"),
+  title = list(text = "Cases per<br>100k Population"),
   type = "indicator",
   mode = "gauge+number+delta",
   delta = list(
@@ -264,6 +303,8 @@ fig
 ### Last Updated {data-height=24px}
 
 Last Updated `r Sys.time()`
+
+[Data Notes](#data-sources)
 
 # Washington State
 
