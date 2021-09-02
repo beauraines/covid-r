@@ -127,6 +127,16 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/populat
   xlab("Percent of state fully vaccinated") + 
   ylab("Last 7 days cases per 100k population")
 
+df %>% 
+  left_join(governors,by = c("location"="State")) %>% 
+  ggplot(aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/population*100000))) +
+    geom_point(aes(color=Party)) +  scale_color_manual(values=c("blue", "green", "red","gray")) +
+    geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+    geom_smooth()+
+    xlab("Percent of state fully vaccinated") + 
+    ylab("Last 7 days cases per 100k population")
+
+
 ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=((last_7_days_cases-last_14_days_cases)/last_14_days_cases))) +
   geom_point(shape=1) + 
   geom_text(aes(label=location),hjust=1, vjust=1,size=2) +
