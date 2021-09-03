@@ -17,6 +17,8 @@ library(hrbrthemes)
 library(plotly)
 library(emojifont)
 library(choroplethr)
+library(rvest)
+
 # extrafont::loadfonts(quiet=TRUE)
 
 si_number = function(x, digits) {
@@ -46,6 +48,17 @@ vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/m
 state_population <- county_population %>%
   group_by(STNAME) %>%
   summarise(population=sum(POPESTIMATE2019))
+
+url <- "https://ballotpedia.org/List_of_governors_of_the_American_states"
+df <- url %>%
+  read_html() %>%
+  html_elements("table") %>%
+  html_table(fill = T)
+
+governors <- df[1][[1]] %>%
+  mutate(Office = str_remove(Office,"Governor of "),State = str_remove(Office,"the ")) %>%
+  select(State, Name, Party) %>%
+  tibble()
 ```
 # King County
 
