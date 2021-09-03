@@ -246,6 +246,19 @@ yesterday_new_cases %>%
   valueBox(caption='Yesterday New Cases',icon="fa-frown")
 ```
 
+### 7 Day Average New Cases
+
+```{r 7 day average new cases}
+king_county_tibble %>% 
+  mutate(rolling_7_day_deaths = mean_run(new_deaths,k=7), 
+         rolling_7_day_cases = mean_run(new_cases,k=7),
+         rolling_14_day_cases = mean_run(new_cases,k=14)) %>% 
+  filter(date == max(date)) %>%
+  pull(rolling_7_day_cases) %>%
+  scales::comma() %>%
+  valueBox(caption='New Cases (7 day average)',icon='fa-frown')
+```
+
 ### Yesterday Deaths
 
 ```{r}
@@ -253,6 +266,18 @@ yesterday_deaths %>%
   valueBox(caption='Yesterday New Deaths',icon='fa-skull')
 ```
 
+### 7 Day Average Deaths
+
+```{r 7 day average deaths}
+king_county_tibble %>% 
+  mutate(rolling_7_day_deaths = mean_run(new_deaths,k=7), 
+         rolling_7_day_cases = mean_run(new_cases,k=7),
+         rolling_14_day_cases = mean_run(new_cases,k=14)) %>% 
+  filter(date == max(date)) %>%
+  pull(rolling_7_day_deaths) %>%
+  scales::comma() %>%
+  valueBox(caption='Deaths (7 day average)',icon='fa-skull')
+```
 
 
 
@@ -544,8 +569,8 @@ choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week C
 <!-- choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1) -->
 <!-- ``` -->
 
-### Cumulative US Cases
-```{r Cumulative US Cases,  echo=FALSE, message = FALSE, out.width="100%"}
+<!-- ### Cumulative US Cases -->
+```{r Cumulative US Cases, eval=FALSE, message=FALSE, include=FALSE, out.width="100%"}
 nytimes %>%
   group_by(date) %>%
   summarise(cumulative_cases = sum(cases), cumulative_deaths = sum(deaths)) %>%
@@ -558,6 +583,39 @@ nytimes %>%
     scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(1000000),limits = c(0,NA)) +
     labs(title="Cumulative US Cases",caption="Data sourced from NY Times GitHub")
 
+```
+
+### Daily New US Cases
+
+```{r US by Day Data}
+us_by_day <- nytimes %>%
+  group_by(date) %>%
+  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
+  arrange(date) %>%
+  mutate(
+    date = as.Date(date),
+    new_cases = cases - lag(cases,default=0,),
+    new_deaths = deaths -lag(deaths,default=0),
+    new_cases_7d_average = mean_run(new_cases,k=7)
+  )
+```
+
+```{r Daily New US Cases}
+
+daily_new_cases_us_plot <- us_by_day %>% 
+  ggplot(aes(x=date,y=new_cases_7d_average)) +
+    geom_line(color="red") +
+    theme_ipsum() +
+    ylab("Cases") + xlab("") +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(500000),limits = c(0,NA)) +
+    labs(title="US New Cases",subtitle = "7 day average",caption="Data sourced from NY Times GitHub")
+
+ggplotly(daily_new_cases_us_plot)  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date"))
+  )
 ```
 
 ##
@@ -587,16 +645,6 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/populat
 
 ## {data-width=350}
 
-```{r US by Day Data}
-us_by_day <- nytimes %>%
-  group_by(date) %>%
-  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
-  arrange(date) %>%
-  mutate(
-    new_cases = cases - lag(cases,default=0,),
-    new_deaths = deaths -lag(deaths,default=0)
-  )
-```
 ### new US cases by day
 
 ```{r}
