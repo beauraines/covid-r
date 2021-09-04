@@ -617,7 +617,8 @@ us_by_day <- nytimes %>%
 
 daily_new_cases_us_plot <- us_by_day %>% 
   ggplot(aes(x=date,y=new_cases_7d_average)) +
-    geom_line(color="red") +
+    geom_line(color="red")+
+    geom_area(fill="#FFCCCB") +
     theme_ipsum() +
     ylab("Cases") + xlab("") +
     scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
