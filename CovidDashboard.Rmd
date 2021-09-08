@@ -18,6 +18,7 @@ library(plotly)
 library(emojifont)
 library(choroplethr)
 library(rvest)
+library(geofacet)
 
 # extrafont::loadfonts(quiet=TRUE)
 
@@ -750,6 +751,33 @@ hospitalizations %>%
 
 ```
 
+# Hospitalizations
+
+### Hospital Bed Utilization By State
+
+```{r Hospital Bed Utilization By State Plot, fig.height=15, fig.width=25, warning=FALSE}
+hospitalizations %>%
+  filter(date>='2021-07-01') %>%
+  select(state,
+         date,
+         `Inpatient_beds utilized` = inpatient_beds_utilization,
+         `Inpatient_beds used for covid` = inpatient_bed_covid_utilization,
+         `Adult ICU_beds utilized` = adult_icu_bed_utilization,
+         `Adult ICU_beds used for covid` = adult_icu_bed_covid_utilization) %>%
+  pivot_longer(cols=any_of(c("Inpatient_beds utilized", "Adult ICU_beds utilized")),
+               names_to="measure",
+               values_to = "utilization") %>%
+  separate(measure,into= c("bed_type","measure"),sep ="_")  %>%
+  ggplot(aes(x=date,y=utilization,color=bed_type)) +
+    geom_line() + 
+    scale_y_continuous(labels = scales::percent, limits=c(NA,1)) +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "1 month") +
+    ylab('') + xlab('') + 
+    geofacet::facet_geo(~ state) +
+    theme_ft_rc() + theme(legend.title = element_blank()) +
+    labs(title="Hospital Bed Utilization",subtitle = "Inpatient and Adult ICU",caption="")
+
+```
 
 # Data Sources
 

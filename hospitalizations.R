@@ -2,6 +2,7 @@ library(RSocrata)
 library(tidyverse)
 library(lubridate)
 library(hrbrthemes)
+library(runner)
 library(geofacet)
 hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
 hospitalizations$date = as.Date(hospitalizations$date)
@@ -150,7 +151,30 @@ hospitalizations_wa %>%
   facet_wrap(~bed_type) +
   theme_ipsum_rc() + theme(legend.title = element_blank())
 
+### US Pediatric Hospitalizations by Percent
 
+hospitalizations %>%
+  filter(date>='2021-01-01' & inpatient_beds_coverage > 98) %>%
+  select(state,
+         date,
+         total_adult_hospitalizations = total_adult_patients_hospitalized_confirmed_and_suspected_covid,
+         total_pediatric_hospitalizatons = total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
+  mutate(pediatric_hospitalizations_percent = total_pediatric_hospitalizatons/(total_pediatric_hospitalizatons + total_adult_hospitalizations)) %>%
+  pivot_longer(cols=any_of(c("total_adult_hospitalizations", "total_pediatric_hospitalizatons","pediatric_hospitalizations_percent")),
+               names_to="measure",
+               values_to = "hospitalized") %>%
+  filter(measure == "pediatric_hospitalizations_percent") %>%
+  mutate(hospitalized = mean_run(hospitalized,k=7)) %>%
+  ggplot(aes(x=date,y=hospitalized,color=measure,fill=measure)) +
+  geom_area(alpha=0.3) +
+  # geom_bar(position="fill", stat="identity") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "1 month") +
+  ylab('') + xlab('') +
+  geofacet::facet_geo(~state)+
+  theme_ipsum_rc() + theme(legend.title = element_blank())
+
+## Hospital Bed Utilization By State
 hospitalizations %>%
   filter(date>='2021-07-01') %>%
   select(state,
@@ -162,12 +186,12 @@ hospitalizations %>%
   pivot_longer(cols=any_of(c("Inpatient_beds utilized", "Adult ICU_beds utilized")),
                names_to="measure",
                values_to = "utilization") %>%
-  separate(measure,into= c("bed_type","measure"),sep ="_") %>%
+  separate(measure,into= c("bed_type","measure"),sep ="_")  %>%
   ggplot(aes(x=date,y=utilization,color=bed_type)) +
   geom_line() + 
-  scale_y_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent, limits=c(NA,1)) +
   scale_x_date(date_labels = "%b-%y",date_breaks = "1 month") +
-  ylab('') + xlab('') +
+  ylab('') + xlab('') + 
   geofacet::facet_geo(~ state) +
   theme_ft_rc() + theme(legend.title = element_blank())
 
@@ -194,7 +218,8 @@ hospitalizations %>%
          total_adult_patients_hospitalized_confirmed_and_suspected_covid,
          staffed_icu_adult_patients_confirmed_and_suspected_covid,
          total_pediatric_patients_hospitalized_confirmed_and_suspected_covid) %>%
-  mutate(hospitalized = +total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid) %>%
+  mutate(hospitalized = total_adult_patients_hospitalized_confirmed_and_suspected_covid + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid + staffed_icu_adult_patients_confirmed_and_suspected_covid)
+  
   
 ### Currently Hospitalized US
 hospitalizations %>%
