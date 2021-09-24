@@ -19,6 +19,7 @@ library(emojifont)
 library(choroplethr)
 library(rvest)
 library(geofacet)
+library(runner)
 
 # extrafont::loadfonts(quiet=TRUE)
 
@@ -181,7 +182,6 @@ Charts Column 2
 
 ### Daily Deaths
 ```{r Daily Deaths, message=FALSE, warning=FALSE}
-library(runner)
 
 king_county_tibble <- king_county %>%
   tibble() %>%
@@ -451,6 +451,34 @@ hospitalizations_wa %>%
 ```
 
 ### Placeholder
+```{r Washington New Cases Over Time}
+washington_by_day <- washington %>%
+  group_by(date) %>%
+  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
+  arrange(date) %>%
+  mutate(
+    date = as.Date(date),
+    new_cases = cases - lag(cases,default=0,),
+    new_deaths = deaths -lag(deaths,default=0),
+    new_cases_7d_average = mean_run(new_cases,k=7)
+  )
+
+
+washington_case_plot <- ggplot(washington_by_day) +
+  geom_bar(stat="identity", aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
+  geom_line(colour= "darkblue", aes(x=date,y=new_cases_7d_average,group=1)) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Cases") +
+  labs(title="Washington Covid-19 Cases",caption="Data sourced from NY Times GitHub")+
+  theme_ipsum()
+
+ggplotly(washington_case_plot) %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date"))
+  )
+
+```
 
 ## KPI {data-width=250}
 
