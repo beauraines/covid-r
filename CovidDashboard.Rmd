@@ -1,5 +1,5 @@
 ---
-title: "Covid Metrics"
+title: "Covid Dashboard"
 output:
   flexdashboard::flex_dashboard:
     orientation: columns
