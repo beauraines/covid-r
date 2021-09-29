@@ -100,7 +100,9 @@ combined_plot = ggplot() +
 
 ## Add titles
 combined_plot = combined_plot +
-  labs(title="King County Covid-19 Cases",caption="Data sourced from NY Times GitHub")
+  labs(title="King County Covid-19 Cases",
+       caption="Data sourced from NY Times GitHub",
+       subtitle = "Daily cases and 14 day rolling average")
 
 cases_per_100K_14d = sum(tail(data$new_cases,14))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
 
@@ -123,10 +125,17 @@ combined_plot = combined_plot  +
 
 ```{r combined_plot}
 
+# Title and subtitle logic from https://datascott.com/blog/subtitles-with-ggplotly/
+
 ggplotly(combined_plot)  %>%
   layout(
     xaxis = list(
-      rangeslider = list(type = "date"))
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County Covid-19 Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Daily cases and 14 day rolling average. Data sourced from NY Times.','</sup>')
+                   )
   )
 ```
 
@@ -170,7 +179,12 @@ risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per
 ggplotly(risk_plot)  %>%
   layout(
     xaxis = list(
-      rangeslider = list(type = "date"))
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County 14 Day Risk per 100k population',
+                                '<br>',
+                                '<sup>',
+                                 'Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.','</sup>')
+                   )
   )
 
 ```
@@ -206,7 +220,12 @@ king_county_tibble <- king_county %>%
   ggplotly()  %>%
   layout(
     xaxis = list(
-      rangeslider = list(type = "date"))
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County Covid-19 Deaths',
+                                '<br>',
+                                '<sup>',
+                                 'Data sourced from NY Times GitHub, does not display massive data correction in December.','</sup>')
+                   )
   )
 
 ```
@@ -475,7 +494,12 @@ washington_case_plot <- ggplot(washington_by_day) +
 ggplotly(washington_case_plot) %>%
   layout(
     xaxis = list(
-      rangeslider = list(type = "date"))
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('Washington Covid-19 Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Daily cases and 7 day rolling average. Data sourced from NY Times.','</sup>')
+                   )
   )
 
 ```
@@ -657,7 +681,12 @@ daily_new_cases_us_plot <- us_by_day %>%
 ggplotly(daily_new_cases_us_plot)  %>%
   layout(
     xaxis = list(
-      rangeslider = list(type = "date"))
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('US New Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Seven day rolling average. Data sourced from NY Times.','</sup>')
+                   )
   )
 ```
 
