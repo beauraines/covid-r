@@ -57,7 +57,7 @@ df <- url %>%
   html_elements("table") %>%
   html_table(fill = T)
 
-governors <- df[1][[1]] %>%
+governors <- df[2][[1]] %>%
   mutate(Office = str_remove(Office,"Governor of "),State = str_remove(Office,"the ")) %>%
   select(State, Name, Party) %>%
   tibble()
