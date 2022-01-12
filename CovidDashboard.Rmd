@@ -177,6 +177,24 @@ for (i in 1:nrow(risk_data)) {
   }
 }
 
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -7 
+  risk_data$last_7_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>%
+                                sum(na.rm=TRUE)
+  risk_data$last_7_day_cases_per_100k_pop[i] <- risk_data$last_7_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_7_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_7d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+
 risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per_100k_pop)) +
   geom_area(fill="lightgray",aes()) +
   geom_hline(yintercept=25,linetype="dashed",color="yellow")+
@@ -338,7 +356,8 @@ max_range <-  case_when(
   value < 100 ~ 100,
   value <= 250 ~ 250,
   value <= 500 ~ 500,
-  TRUE ~ 1200
+  value <=1000 ~ 1000,
+  TRUE ~ 250*ceiling(value/250)
 )
 
 fig <- plot_ly(
@@ -348,7 +367,7 @@ fig <- plot_ly(
   type = "indicator",
   mode = "gauge+number+delta",
   delta = list(
-                reference= head(tail(risk_data,2),1)$last_7_day_cases_per_100k_pop,
+                reference= head(tail(risk_data,2),1)$last_14_day_cases_per_100k_pop,
                 increasing =list(color='#FF4136'),
                 decreasing =list(color='#3D9970')
             ),
