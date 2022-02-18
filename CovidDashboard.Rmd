@@ -367,7 +367,7 @@ fig <- plot_ly(
   type = "indicator",
   mode = "gauge+number+delta",
   delta = list(
-                reference= head(tail(risk_data,2),1)$last_14_day_cases_per_100k_pop,
+                reference= head(tail(risk_data,2),1)$last_7_day_cases_per_100k_pop,
                 increasing =list(color='#FF4136'),
                 decreasing =list(color='#3D9970')
             ),
