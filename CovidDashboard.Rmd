@@ -639,7 +639,7 @@ ggplotly(washington_case_plot) %>%
 
 
 # United States
-```{r US Data}
+```{r US Data, message=FALSE}
 cases_week_over_week <- nytimes %>%
   filter( date >= Sys.Date() - 15 & date <= Sys.Date() - 8) %>%
   group_by(state, county, fips) %>%
@@ -660,50 +660,6 @@ cases_week_over_week$state_fips = substr(cases_week_over_week$fips,1,nchar(cases
 
 ```
 
-## {data-width=650}
-
-### State Compared to prior 7 days
-```{r Case Growth by State, echo=FALSE, message = FALSE, out.width="100%"}
-state_cases_week_over_week <- cases_week_over_week %>%
-                                group_by(state,state_fips) %>%
-                                summarise(last_7_days_cases = sum(last_7_days_cases), last_14_days_cases = sum(last_14_days_cases))
-
-state_cases_week_over_week$region = str_to_lower(state_cases_week_over_week$state)
-state_cases_week_over_week$value = (state_cases_week_over_week$last_7_days_cases-state_cases_week_over_week$last_14_days_cases)/state_cases_week_over_week$last_14_days_cases
-
-choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1)
-
-```
-
-<!-- ### County Compared to prior 7 days  -->
-<!-- ```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"} -->
-
-
-<!-- ## Requires region and value for plot -->
-<!-- cases_week_over_week$value = cases_week_over_week$new_case_growth -->
-<!-- cases_week_over_week$region = cases_week_over_week$fips -->
-
-<!-- choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1) -->
-<!-- ``` -->
-
-<!-- ### Cumulative US Cases -->
-```{r Cumulative US Cases, eval=FALSE, message=FALSE, include=FALSE, out.width="100%"}
-nytimes %>%
-  group_by(date) %>%
-  summarise(cumulative_cases = sum(cases), cumulative_deaths = sum(deaths)) %>%
-  ggplot(aes(x=as.Date(date),y=cumulative_cases)) +
-    # geom_point(color="red") +
-    geom_line(color="red") +
-    theme_ipsum() +
-    ylab("Cases") + xlab("") +
-    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(1000000),limits = c(0,NA)) +
-    labs(title="Cumulative US Cases",caption="Data sourced from NY Times GitHub")
-
-```
-
-### Daily New US Cases
-
 ```{r US by Day Data}
 us_by_day <- nytimes %>%
   group_by(date) %>%
@@ -717,56 +673,7 @@ us_by_day <- nytimes %>%
   )
 ```
 
-```{r Daily New US Cases}
-
-daily_new_cases_us_plot <- us_by_day %>% 
-  ggplot(aes(x=date,y=new_cases_7d_average)) +
-    geom_line(color="red")+
-    geom_area(fill="#FFCCCB") +
-    theme_ipsum() +
-    ylab("Cases") + xlab("") +
-    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(500000),limits = c(0,NA)) +
-    labs(title="US New Cases",subtitle = "7 day average",caption="Data sourced from NY Times GitHub")
-
-ggplotly(daily_new_cases_us_plot)  %>%
-  layout(
-    xaxis = list(
-      rangeslider = list(type = "date")),
-      title = list(text = paste0('US New Cases',
-                                '<br>',
-                                '<sup>',
-                                 'Seven day rolling average. Data sourced from NY Times.','</sup>')
-                   )
-  )
-```
-
-##
-
-### Vaccinations
-```{r Vaccination Rates by State, echo=FALSE, message = FALSE}
-vaccinations %>%
-  filter(date == max(date)) %>%
-  select(location,people_fully_vaccinated_per_hundred) %>%
-  mutate(location=tolower(location)) %>%
-  rename(region= location,value = people_fully_vaccinated_per_hundred) %>%
-  choroplethr::state_choropleth(title="Vaccinations Rate", legend = "%", num_colors=1)
-```
-
-### Impact of Vaccination on Community Risk
-```{r warning=FALSE}
-df <-inner_join(v_rate,state_cases_week_over_week,c("location"="state")) %>%
-      left_join(state_population,c("location" = "STNAME"))
-
-ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/population*100000))) +
-  geom_point() +
-  geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
-  geom_smooth()+
-  xlab("Percent of state fully vaccinated") +
-  ylab("Last 7 days cases per 100k population")
-```
-
-## {data-width=350}
+## US KPI Cards {data-width=350}
 
 ### new US cases by day
 
@@ -858,6 +765,102 @@ hospitalizations %>%
   valueBox(caption='Yesterday\'s Hospitalizations',icon="fa-bed")
 
 ```
+
+
+
+## US Charts {data-width=650}
+
+### State Compared to prior 7 days
+```{r Case Growth by State, echo=FALSE, message = FALSE, out.width="100%"}
+state_cases_week_over_week <- cases_week_over_week %>%
+                                group_by(state,state_fips) %>%
+                                summarise(last_7_days_cases = sum(last_7_days_cases), last_14_days_cases = sum(last_14_days_cases))
+
+state_cases_week_over_week$region = str_to_lower(state_cases_week_over_week$state)
+state_cases_week_over_week$value = (state_cases_week_over_week$last_7_days_cases-state_cases_week_over_week$last_14_days_cases)/state_cases_week_over_week$last_14_days_cases
+
+choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1)
+
+```
+
+<!-- ### County Compared to prior 7 days  -->
+<!-- ```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"} -->
+
+
+<!-- ## Requires region and value for plot -->
+<!-- cases_week_over_week$value = cases_week_over_week$new_case_growth -->
+<!-- cases_week_over_week$region = cases_week_over_week$fips -->
+
+<!-- choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1) -->
+<!-- ``` -->
+
+<!-- ### Cumulative US Cases -->
+```{r Cumulative US Cases, eval=FALSE, message=FALSE, include=FALSE, out.width="100%"}
+nytimes %>%
+  group_by(date) %>%
+  summarise(cumulative_cases = sum(cases), cumulative_deaths = sum(deaths)) %>%
+  ggplot(aes(x=as.Date(date),y=cumulative_cases)) +
+    # geom_point(color="red") +
+    geom_line(color="red") +
+    theme_ipsum() +
+    ylab("Cases") + xlab("") +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(1000000),limits = c(0,NA)) +
+    labs(title="Cumulative US Cases",caption="Data sourced from NY Times GitHub")
+
+```
+
+### Daily New US Cases
+
+```{r Daily New US Cases}
+
+daily_new_cases_us_plot <- us_by_day %>% 
+  ggplot(aes(x=date,y=new_cases_7d_average)) +
+    geom_line(color="red")+
+    geom_area(fill="#FFCCCB") +
+    theme_ipsum() +
+    ylab("Cases") + xlab("") +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    scale_y_continuous(labels = scales::label_number_si(),minor_breaks = scales::breaks_width(500000),limits = c(0,NA)) +
+    labs(title="US New Cases",subtitle = "7 day average",caption="Data sourced from NY Times GitHub")
+
+ggplotly(daily_new_cases_us_plot)  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('US New Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Seven day rolling average. Data sourced from NY Times.','</sup>')
+                   )
+  )
+```
+
+##
+
+### Vaccinations
+```{r Vaccination Rates by State, echo=FALSE, message = FALSE}
+vaccinations %>%
+  filter(date == max(date)) %>%
+  select(location,people_fully_vaccinated_per_hundred) %>%
+  mutate(location=tolower(location)) %>%
+  rename(region= location,value = people_fully_vaccinated_per_hundred) %>%
+  choroplethr::state_choropleth(title="Vaccinations Rate", legend = "%", num_colors=1)
+```
+
+### Impact of Vaccination on Community Risk
+```{r warning=FALSE}
+df <-inner_join(v_rate,state_cases_week_over_week,c("location"="state")) %>%
+      left_join(state_population,c("location" = "STNAME"))
+
+ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/population*100000))) +
+  geom_point() +
+  geom_text(aes(label=location),hjust=1, vjust=1,size=2)+
+  geom_smooth()+
+  xlab("Percent of state fully vaccinated") +
+  ylab("Last 7 days cases per 100k population")
+```
+
 
 # Hospitalizations
 
