@@ -64,47 +64,25 @@ governors <- df[2][[1]] %>%
 ```
 # King County
 
-Charts {data-width=650}
------------------------------------------------------------------------
-
-### New Cases
-
-```{r 14_day_data, include = FALSE}
-
+```{r King County Data Computation, message=FALSE, warning=FALSE}
 data <- data.frame(date = as.Date(tail(king_county$date,-1)), new_cases = diff(king_county$cases), new_deaths = diff(king_county$deaths))
 ## missing very very first day
-p <- ggplot(data, aes(x=date, y=new_cases)) +
-  # geom_line() +
-  geom_bar(stat = "identity") +
-  xlab("")+ylab("New Cases")
-p+scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
 
-x<-zoo(data$new_cases)
 
-rolling_average = data.frame(date = as.Date(tail(king_county$date,-14)), rolling_new_cases_14d = rollmean(x,14))
-rolling_average_7d = data.frame(date = as.Date(tail(king_county$date,-7)), rolling_new_cases_7d = rollmean(x,7))
+risk_data <- tibble(date = data$date,
+              new_cases = data$new_cases,
+              last_14_day_cases = NULL,
+              last_14_day_cases_per_100k_pop = NULL
+         )
 
-p2 = ggplot(data=rolling_average, aes(x=date,y=rolling_new_cases_14d,group=1))+geom_line()+xlab("")
-p2 +ylab("14 Day Rolling Average New Cases")
-p2 +scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
 
-combined_plot = ggplot() +
-  geom_bar(stat="identity",data=data, aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
-  # geom_line(data=rolling_average, colour= "darkblue", aes(x=date,y=rolling_new_cases_14d,group=1)) +
-  geom_line(data=rolling_average_7d, colour= "darkblue", aes(x=date,y=rolling_new_cases_7d,group=1)) +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  xlab("") + ylab("Cases")
-
-# Add annotation
-#combined_plot +
-#  annotate(geom="text",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases,label="Christmas Day") +
-#  annotate(geom="point",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases, size=10, shape=21, fill="transparent")
-
-## Add titles
-combined_plot = combined_plot +
-  labs(title="King County Covid-19 Cases",
-       caption="Data sourced from NY Times GitHub",
-       subtitle = "Daily cases and 7 day rolling average")
+king_county_tibble <- king_county %>%
+  tibble() %>%
+  mutate(
+    date = lubridate::ymd(date),
+    new_cases = cases - lag(cases,default=0),
+    new_deaths = deaths -lag(deaths,default=0)
+  )
 
 cases_per_100K_14d = sum(tail(data$new_cases,14))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
 
@@ -128,141 +106,7 @@ if(cases_per_100K_7d >= 100) {
   risk = "Low"
 }
 
-## Write on plot
-# combined_plot = combined_plot + annotate(geom="text",x=as.Date(Sys.Date()-21),y=2000,label=paste("Cases per 100k pop:",round(cases_per_100K_14d,2),sep="\n"))
-
-# ipsum Theme
-combined_plot = combined_plot  +
-  theme_ipsum()
 ```
-
-```{r combined_plot}
-
-# Title and subtitle logic from https://datascott.com/blog/subtitles-with-ggplotly/
-
-ggplotly(combined_plot)  %>%
-  layout(
-    xaxis = list(
-      rangeslider = list(type = "date")),
-      title = list(text = paste0('King County Covid-19 Cases',
-                                '<br>',
-                                '<sup>',
-                                 'Daily cases and 7 day rolling average. Data sourced from NY Times.','</sup>')
-                   )
-  )
-```
-
-### Risk Factor over Time
-```{r King County Risk Factors, echo=FALSE, message = FALSE, warning=FALSE }
-risk_data <- tibble(date = data$date,
-              new_cases = data$new_cases,
-              last_14_day_cases = NULL,
-              last_14_day_cases_per_100k_pop = NULL
-         )
-
-for (i in 1:nrow(risk_data)) {
-  startdate = risk_data[i,'date']$date
-  enddate = risk_data[i,'date']$date -14
-  risk_data$last_14_day_cases[i] <- risk_data %>%
-                                subset(date <= startdate & date >= enddate) %>%
-                                select(new_cases) %>%
-                                sum(na.rm=TRUE)
-  risk_data$last_14_day_cases_per_100k_pop[i] <- risk_data$last_14_day_cases[i] / 2252782 * 100000
-  if(risk_data$last_14_day_cases_per_100k_pop[i] >= 75) {
-    risk_data$risk[i] = "High"
-  } else if (cases_per_100K_14d >= 25 ){
-    risk_data$risk[i] = "Moderate"
-  } else {
-    risk_data$risk[i] = "Low"
-  }
-}
-
-for (i in 1:nrow(risk_data)) {
-  startdate = risk_data[i,'date']$date
-  enddate = risk_data[i,'date']$date -7 
-  risk_data$last_7_day_cases[i] <- risk_data %>%
-                                subset(date <= startdate & date >= enddate) %>%
-                                select(new_cases) %>%
-                                sum(na.rm=TRUE)
-  risk_data$last_7_day_cases_per_100k_pop[i] <- risk_data$last_7_day_cases[i] / 2252782 * 100000
-  if(risk_data$last_7_day_cases_per_100k_pop[i] >= 75) {
-    risk_data$risk[i] = "High"
-  } else if (cases_per_100K_7d >= 25 ){
-    risk_data$risk[i] = "Moderate"
-  } else {
-    risk_data$risk[i] = "Low"
-  }
-}
-
-
-risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per_100k_pop)) +
-  geom_area(fill="lightgray",aes()) +
-  geom_hline(yintercept=25,linetype="dashed",color="yellow")+
-  geom_hline(yintercept=75,linetype="dashed",color="red") +
-  labs(title="King County 14 Day Risk per 100k population",
-       subtitle="Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.",
-       caption="") +
-  xlab("") +
-  ylab("Cases per 100k population in last 14 days") +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  theme_ipsum()
-
-ggplotly(risk_plot)  %>%
-  layout(
-    xaxis = list(
-      rangeslider = list(type = "date")),
-      title = list(text = paste0('King County 14 Day Risk per 100k population',
-                                '<br>',
-                                '<sup>',
-                                 'Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.','</sup>')
-                   )
-  )
-
-```
-
-
-
-Charts Column 2
----------------
-
-### Daily Deaths
-```{r Daily Deaths, message=FALSE, warning=FALSE}
-
-king_county_tibble <- king_county %>%
-  tibble() %>%
-  mutate(
-    date = lubridate::ymd(date),
-    new_cases = cases - lag(cases,default=0),
-    new_deaths = deaths -lag(deaths,default=0)
-  )
-
-(king_county_tibble %>%
-  mutate(rolling_7_day_deaths = mean_run(new_deaths,k=7)) %>%
-  ggplot()  +
-  # geom_smooth() +
-  geom_bar(aes(x=date,y=new_deaths),stat = "identity",fill="#FF9999", colour="#FF9999") +
-  geom_line(aes(x=date,y=rolling_7_day_deaths)) +
-  ylim(0,NA) +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  xlab("") + ylab("Deaths") +
-  labs(title="King County Covid-19 Deaths",caption="Data sourced from NY Times GitHub, does not display massive data correction in December") +
-  theme_ipsum()
-  ) %>%
-  ggplotly()  %>%
-  layout(
-    xaxis = list(
-      rangeslider = list(type = "date")),
-      title = list(text = paste0('King County Covid-19 Deaths',
-                                '<br>',
-                                '<sup>',
-                                 'Data sourced from NY Times GitHub, does not display massive data correction in December.','</sup>')
-                   )
-  )
-
-```
-
-### Placeholder
-
 
 KPI {data-width=350}
 -----------------------------------------------------------------------
@@ -396,6 +240,177 @@ fig
 Last Updated `r Sys.time()`
 
 [Data Notes](#data-sources)
+
+
+Charts {data-width=650}
+-----------------------------------------------------------------------
+
+### New Cases
+
+```{r 14_day_data, include = FALSE}
+
+
+p <- ggplot(data, aes(x=date, y=new_cases)) +
+  # geom_line() +
+  geom_bar(stat = "identity") +
+  xlab("")+ylab("New Cases")
+p+scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+
+x<-zoo(data$new_cases)
+
+rolling_average = data.frame(date = as.Date(tail(king_county$date,-14)), rolling_new_cases_14d = rollmean(x,14))
+rolling_average_7d = data.frame(date = as.Date(tail(king_county$date,-7)), rolling_new_cases_7d = rollmean(x,7))
+
+p2 = ggplot(data=rolling_average, aes(x=date,y=rolling_new_cases_14d,group=1))+geom_line()+xlab("")
+p2 +ylab("14 Day Rolling Average New Cases")
+p2 +scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+
+combined_plot = ggplot() +
+  geom_bar(stat="identity",data=data, aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
+  # geom_line(data=rolling_average, colour= "darkblue", aes(x=date,y=rolling_new_cases_14d,group=1)) +
+  geom_line(data=rolling_average_7d, colour= "darkblue", aes(x=date,y=rolling_new_cases_7d,group=1)) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Cases")
+
+# Add annotation
+#combined_plot +
+#  annotate(geom="text",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases,label="Christmas Day") +
+#  annotate(geom="point",x =as.Date('2020-12-15'),subset(data,date=='2020-12-15')$new_cases, size=10, shape=21, fill="transparent")
+
+## Add titles
+combined_plot = combined_plot +
+  labs(title="King County Covid-19 Cases",
+       caption="Data sourced from NY Times GitHub",
+       subtitle = "Daily cases and 7 day rolling average")
+
+
+
+## Write on plot
+# combined_plot = combined_plot + annotate(geom="text",x=as.Date(Sys.Date()-21),y=2000,label=paste("Cases per 100k pop:",round(cases_per_100K_14d,2),sep="\n"))
+
+# ipsum Theme
+combined_plot = combined_plot  +
+  theme_ipsum()
+```
+
+```{r combined_plot}
+
+# Title and subtitle logic from https://datascott.com/blog/subtitles-with-ggplotly/
+
+ggplotly(combined_plot)  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County Covid-19 Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Daily cases and 7 day rolling average. Data sourced from NY Times.','</sup>')
+                   )
+  )
+```
+
+### Risk Factor over Time
+```{r King County Risk Factors, echo=FALSE, message = FALSE, warning=FALSE }
+
+
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -14
+  risk_data$last_14_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>%
+                                sum(na.rm=TRUE)
+  risk_data$last_14_day_cases_per_100k_pop[i] <- risk_data$last_14_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_14_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_14d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -7 
+  risk_data$last_7_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>%
+                                sum(na.rm=TRUE)
+  risk_data$last_7_day_cases_per_100k_pop[i] <- risk_data$last_7_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_7_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_7d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+
+risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per_100k_pop)) +
+  geom_area(fill="lightgray",aes()) +
+  geom_hline(yintercept=25,linetype="dashed",color="yellow")+
+  geom_hline(yintercept=75,linetype="dashed",color="red") +
+  labs(title="King County 14 Day Risk per 100k population",
+       subtitle="Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.",
+       caption="") +
+  xlab("") +
+  ylab("Cases per 100k population in last 14 days") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  theme_ipsum()
+
+ggplotly(risk_plot)  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County 14 Day Risk per 100k population',
+                                '<br>',
+                                '<sup>',
+                                 'Using Washington state risk factors: Less than 25, low, 25 - 75 medium, greater than 75, high. Effective June 30, 2021, Washington state lifted their mask mandate and switched to the CDC Risk factors.','</sup>')
+                   )
+  )
+
+```
+
+
+
+Charts Column 2
+---------------
+
+### Daily Deaths
+```{r Daily Deaths, message=FALSE, warning=FALSE}
+
+
+
+(king_county_tibble %>%
+  mutate(rolling_7_day_deaths = mean_run(new_deaths,k=7)) %>%
+  ggplot()  +
+  # geom_smooth() +
+  geom_bar(aes(x=date,y=new_deaths),stat = "identity",fill="#FF9999", colour="#FF9999") +
+  geom_line(aes(x=date,y=rolling_7_day_deaths)) +
+  ylim(0,NA) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Deaths") +
+  labs(title="King County Covid-19 Deaths",caption="Data sourced from NY Times GitHub, does not display massive data correction in December") +
+  theme_ipsum()
+  ) %>%
+  ggplotly()  %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('King County Covid-19 Deaths',
+                                '<br>',
+                                '<sup>',
+                                 'Data sourced from NY Times GitHub, does not display massive data correction in December.','</sup>')
+                   )
+  )
+
+```
+
+### Placeholder
+
+
 
 # Washington State
 
