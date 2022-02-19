@@ -413,81 +413,13 @@ Charts Column 2
 
 
 # Washington State
+## KPI {data-width=250}
 
-## Column 1 {data-width=750}
-### County Cases per 100k Population over 7 days
-```{r Washington county map, echo=FALSE, message = FALSE }
-outlist = list()
-
-washington = subset(nytimes,state =='Washington')
-
-#Remove unknown county
-washington <- subset(washington,county != 'Unknown')
-nytimes <- subset(nytimes,county != 'Unknown')
-
-
-for (c in unique(washington$county)) {
-  county_info <-subset(washington,county == c & county != 'Unknown')
-  county_fips = unique(county_info$fips)
-  fooSTATE = as.numeric(substr(county_fips, 1, 2))
-  fooCOUNTY = as.numeric(substr(county_fips, nchar(county_fips)-3+1, nchar(county_fips)))
-  population = subset(county_population,STATE == fooSTATE & COUNTY == fooCOUNTY,select=c('POPESTIMATE2019'),na=0)$POPESTIMATE2019
-  first_case_reported <- min(county_info$date)
-  new_cases =data.frame(date = tail(county_info$date,-1), new_cases = diff(county_info$cases))
-  last_14d_cases <- sum(subset(new_cases,date >= Sys.Date()-14)$new_cases)
-  last_7d_cases <- sum(subset(new_cases,date >= Sys.Date()-7)$new_cases)
-  out <- data.frame(state = unique(county_info$state),
-                    county = unique(county_info$county),
-                    county_fips = county_fips,
-                    region = unique(county_info$fips),
-                    first_case_reported = first_case_reported,
-                    last_14d_cases = last_14d_cases,
-                    last_7d_cases = last_7d_cases,
-                    population = coalesce(population,0),
-                    last_14d_cases_per_100k = coalesce(last_14d_cases / population *100000,0) ,
-                    last_7d_cases_per_100k = coalesce(last_7d_cases / population *100000,0))
-  outlist[[unique(county_info$fips)]] <- out
-}
-
-
-
-metrics = do.call(rbind,outlist)
-
-
-library(choroplethr)
-metrics$value = metrics$last_7d_cases_per_100k
-
-choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k population",num_colors = 4,state_zoom = 'washington')+ scale_fill_brewer(palette=7)
-
+```{r state KPI data, include=FALSE}
+source("CumulativeDeathsAndCases.R")
 ```
 
-
-### Washington Vaccinations
-```{r Washington Daily Vaccinations }
-daily_vax_plot <- vaccinations %>%
-  filter( location %in% c('Washington')) %>%
-  select(date,location,daily_vaccinations) %>%
-  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() +
-  xlab("") + ylab("Daiily Vaccinations") +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
-
-daily_percent_vax_plot <- vaccinations %>%
-  filter( location %in% c('Washington')) %>%
-  select(date,location,people_fully_vaccinated_per_hundred) %>%
-  ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() +
-  xlab("Date") + ylab("Percent Fully Vaccinated") +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  ylim(0,100)
-
-gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
-
-```
-
-
-## Column 2
-
-### Hospital Bed Utilization
-```{r Hospitaliztion Data}
+```{r Hospitaliztion Data, warning=FALSE}
 library(RSocrata)
 hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
 hospitalizations$date = as.Date(hospitalizations$date)
@@ -495,68 +427,7 @@ hospitalizations <-tibble(hospitalizations)
 hospitalizations_wa = subset(hospitalizations,state == 'WA')
 ```
 
-```{r Hospital Bed Utilization, message= FALSE, warning= FALSE}
-hospitalizations_wa %>%
-  filter(date>='2021-01-01' & inpatient_beds_coverage > 98) %>%
-  select(state,
-         date,
-         `Inpatient_beds utilized` = inpatient_beds_utilization,
-         `Inpatient_beds used for covid` = inpatient_bed_covid_utilization,
-         `Adult ICU_beds utilized` = adult_icu_bed_utilization,
-         `Adult ICU_beds used for covid` = adult_icu_bed_covid_utilization) %>%
-  pivot_longer(cols=any_of(c("Inpatient_beds utilized", "Inpatient_beds used for covid", "Adult ICU_beds utilized", "Adult ICU_beds used for covid")),
-               names_to="measure",
-               values_to = "utilization") %>%
-  separate(measure,into= c("bed_type","measure"),sep ="_") %>%
-  ggplot(aes(x=date,y=utilization,color=measure)) +
-  geom_line() +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  ylab('') + xlab('') +
-  facet_wrap(~bed_type) +
-  theme_ipsum_rc() + theme(legend.title = element_blank(),legend.position="bottom")
-```
 
-### Placeholder
-```{r Washington New Cases Over Time}
-washington_by_day <- washington %>%
-  group_by(date) %>%
-  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
-  arrange(date) %>%
-  mutate(
-    date = as.Date(date),
-    new_cases = cases - lag(cases,default=0,),
-    new_deaths = deaths -lag(deaths,default=0),
-    new_cases_7d_average = mean_run(new_cases,k=7)
-  )
-
-
-washington_case_plot <- ggplot(washington_by_day) +
-  geom_bar(stat="identity", aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
-  geom_line(colour= "darkblue", aes(x=date,y=new_cases_7d_average,group=1)) +
-  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
-  xlab("") + ylab("Cases") +
-  labs(title="Washington Covid-19 Cases",caption="Data sourced from NY Times GitHub")+
-  theme_ipsum()
-
-ggplotly(washington_case_plot) %>%
-  layout(
-    xaxis = list(
-      rangeslider = list(type = "date")),
-      title = list(text = paste0('Washington Covid-19 Cases',
-                                '<br>',
-                                '<sup>',
-                                 'Daily cases and 7 day rolling average. Data sourced from NY Times.','</sup>')
-                   )
-  )
-
-```
-
-## KPI {data-width=250}
-
-```{r state KPI data, include=FALSE}
-source("CumulativeDeathsAndCases.R")
-```
 
 ### Cumulative Cases
 ```{r}
@@ -632,6 +503,138 @@ last_14_day_cases = subset(last_14_day_cases, select = c("state","county","fips"
 last_14_day_cases$cases_per_100K_14d = last_14_day_cases$last_14_days_cases / last_14_day_cases$POPESTIMATE2019 * 100000
 
 knitr::kable(subset(last_14_day_cases,state=='Washington',select=c('county','last_14_days_cases')),caption="Cases by County, Last 14 Days")
+```
+
+
+## Column 1 {data-width=750}
+### County Cases per 100k Population over 7 days
+```{r Washington county map, echo=FALSE, message = FALSE }
+outlist = list()
+
+washington = subset(nytimes,state =='Washington')
+
+#Remove unknown county
+washington <- subset(washington,county != 'Unknown')
+nytimes <- subset(nytimes,county != 'Unknown')
+
+
+for (c in unique(washington$county)) {
+  county_info <-subset(washington,county == c & county != 'Unknown')
+  county_fips = unique(county_info$fips)
+  fooSTATE = as.numeric(substr(county_fips, 1, 2))
+  fooCOUNTY = as.numeric(substr(county_fips, nchar(county_fips)-3+1, nchar(county_fips)))
+  population = subset(county_population,STATE == fooSTATE & COUNTY == fooCOUNTY,select=c('POPESTIMATE2019'),na=0)$POPESTIMATE2019
+  first_case_reported <- min(county_info$date)
+  new_cases =data.frame(date = tail(county_info$date,-1), new_cases = diff(county_info$cases))
+  last_14d_cases <- sum(subset(new_cases,date >= Sys.Date()-14)$new_cases)
+  last_7d_cases <- sum(subset(new_cases,date >= Sys.Date()-7)$new_cases)
+  out <- data.frame(state = unique(county_info$state),
+                    county = unique(county_info$county),
+                    county_fips = county_fips,
+                    region = unique(county_info$fips),
+                    first_case_reported = first_case_reported,
+                    last_14d_cases = last_14d_cases,
+                    last_7d_cases = last_7d_cases,
+                    population = coalesce(population,0),
+                    last_14d_cases_per_100k = coalesce(last_14d_cases / population *100000,0) ,
+                    last_7d_cases_per_100k = coalesce(last_7d_cases / population *100000,0))
+  outlist[[unique(county_info$fips)]] <- out
+}
+
+
+
+metrics = do.call(rbind,outlist)
+
+
+library(choroplethr)
+metrics$value = metrics$last_7d_cases_per_100k
+
+choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k population",num_colors = 4,state_zoom = 'washington')+ scale_fill_brewer(palette=7)
+
+```
+
+
+### Washington Vaccinations
+```{r Washington Daily Vaccinations }
+daily_vax_plot <- vaccinations %>%
+  filter( location %in% c('Washington')) %>%
+  select(date,location,daily_vaccinations) %>%
+  ggplot(aes(x=date,y=daily_vaccinations)) + geom_line() +
+  xlab("") + ylab("Daiily Vaccinations") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month")
+
+daily_percent_vax_plot <- vaccinations %>%
+  filter( location %in% c('Washington')) %>%
+  select(date,location,people_fully_vaccinated_per_hundred) %>%
+  ggplot(aes(x=date,y=people_fully_vaccinated_per_hundred)) + geom_line() +
+  xlab("Date") + ylab("Percent Fully Vaccinated") +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  ylim(0,100)
+
+gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
+
+```
+
+
+## Column 2
+
+### Hospital Bed Utilization
+
+```{r Hospital Bed Utilization, message= FALSE, warning= FALSE}
+hospitalizations_wa %>%
+  filter(date>='2021-01-01' & inpatient_beds_coverage > 98) %>%
+  select(state,
+         date,
+         `Inpatient_beds utilized` = inpatient_beds_utilization,
+         `Inpatient_beds used for covid` = inpatient_bed_covid_utilization,
+         `Adult ICU_beds utilized` = adult_icu_bed_utilization,
+         `Adult ICU_beds used for covid` = adult_icu_bed_covid_utilization) %>%
+  pivot_longer(cols=any_of(c("Inpatient_beds utilized", "Inpatient_beds used for covid", "Adult ICU_beds utilized", "Adult ICU_beds used for covid")),
+               names_to="measure",
+               values_to = "utilization") %>%
+  separate(measure,into= c("bed_type","measure"),sep ="_") %>%
+  ggplot(aes(x=date,y=utilization,color=measure)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  ylab('') + xlab('') +
+  facet_wrap(~bed_type) +
+  theme_ipsum_rc() + theme(legend.title = element_blank(),legend.position="bottom")
+```
+
+### Placeholder
+```{r Washington New Cases Over Time}
+washington_by_day <- washington %>%
+  group_by(date) %>%
+  summarise(cases = sum(cases,na.rm = TRUE),deaths=sum(deaths,na.rm = TRUE)) %>%
+  arrange(date) %>%
+  mutate(
+    date = as.Date(date),
+    new_cases = cases - lag(cases,default=0,),
+    new_deaths = deaths -lag(deaths,default=0),
+    new_cases_7d_average = mean_run(new_cases,k=7)
+  )
+
+
+washington_case_plot <- ggplot(washington_by_day) +
+  geom_bar(stat="identity", aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
+  geom_line(colour= "darkblue", aes(x=date,y=new_cases_7d_average,group=1)) +
+  scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+  xlab("") + ylab("Cases") +
+  labs(title="Washington Covid-19 Cases",caption="Data sourced from NY Times GitHub")+
+  theme_ipsum()
+
+ggplotly(washington_case_plot) %>%
+  layout(
+    xaxis = list(
+      rangeslider = list(type = "date")),
+      title = list(text = paste0('Washington Covid-19 Cases',
+                                '<br>',
+                                '<sup>',
+                                 'Daily cases and 7 day rolling average. Data sourced from NY Times.','</sup>')
+                   )
+  )
+
 ```
 
 
