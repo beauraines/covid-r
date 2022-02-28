@@ -75,6 +75,46 @@ risk_data <- tibble(date = data$date,
               last_14_day_cases_per_100k_pop = NULL
          )
 
+cases_per_100K_14d = sum(tail(data$new_cases,14))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
+
+cases_per_100K_7d = sum(tail(data$new_cases,7))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
+
+
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -14
+  risk_data$last_14_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>%
+                                sum(na.rm=TRUE)
+  risk_data$last_14_day_cases_per_100k_pop[i] <- risk_data$last_14_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_14_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_14d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+for (i in 1:nrow(risk_data)) {
+  startdate = risk_data[i,'date']$date
+  enddate = risk_data[i,'date']$date -7 
+  risk_data$last_7_day_cases[i] <- risk_data %>%
+                                subset(date <= startdate & date >= enddate) %>%
+                                select(new_cases) %>%
+                                sum(na.rm=TRUE)
+  risk_data$last_7_day_cases_per_100k_pop[i] <- risk_data$last_7_day_cases[i] / 2252782 * 100000
+  if(risk_data$last_7_day_cases_per_100k_pop[i] >= 75) {
+    risk_data$risk[i] = "High"
+  } else if (cases_per_100K_7d >= 25 ){
+    risk_data$risk[i] = "Moderate"
+  } else {
+    risk_data$risk[i] = "Low"
+  }
+}
+
+
 
 king_county_tibble <- king_county %>%
   tibble() %>%
@@ -84,9 +124,6 @@ king_county_tibble <- king_county %>%
     new_deaths = deaths -lag(deaths,default=0)
   )
 
-cases_per_100K_14d = sum(tail(data$new_cases,14))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
-
-cases_per_100K_7d = sum(tail(data$new_cases,7))/subset(county_population, STNAME == 'Washington' & CTYNAME == "King County" ,select=POPESTIMATE2019)*100000
 
 if(cases_per_100K_14d >= 75) {
   risk = "High"
@@ -311,41 +348,6 @@ ggplotly(combined_plot)  %>%
 
 ### Risk Factor over Time
 ```{r King County Risk Factors, echo=FALSE, message = FALSE, warning=FALSE }
-
-
-for (i in 1:nrow(risk_data)) {
-  startdate = risk_data[i,'date']$date
-  enddate = risk_data[i,'date']$date -14
-  risk_data$last_14_day_cases[i] <- risk_data %>%
-                                subset(date <= startdate & date >= enddate) %>%
-                                select(new_cases) %>%
-                                sum(na.rm=TRUE)
-  risk_data$last_14_day_cases_per_100k_pop[i] <- risk_data$last_14_day_cases[i] / 2252782 * 100000
-  if(risk_data$last_14_day_cases_per_100k_pop[i] >= 75) {
-    risk_data$risk[i] = "High"
-  } else if (cases_per_100K_14d >= 25 ){
-    risk_data$risk[i] = "Moderate"
-  } else {
-    risk_data$risk[i] = "Low"
-  }
-}
-
-for (i in 1:nrow(risk_data)) {
-  startdate = risk_data[i,'date']$date
-  enddate = risk_data[i,'date']$date -7 
-  risk_data$last_7_day_cases[i] <- risk_data %>%
-                                subset(date <= startdate & date >= enddate) %>%
-                                select(new_cases) %>%
-                                sum(na.rm=TRUE)
-  risk_data$last_7_day_cases_per_100k_pop[i] <- risk_data$last_7_day_cases[i] / 2252782 * 100000
-  if(risk_data$last_7_day_cases_per_100k_pop[i] >= 75) {
-    risk_data$risk[i] = "High"
-  } else if (cases_per_100K_7d >= 25 ){
-    risk_data$risk[i] = "Moderate"
-  } else {
-    risk_data$risk[i] = "Low"
-  }
-}
 
 
 risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per_100k_pop)) +
