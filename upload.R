@@ -1,13 +1,30 @@
-library(AzureStor)
-options(azure_storage_progress_bar=TRUE)
-print("Uploading to azure")
+library(aws.s3)
 args = commandArgs(trailingOnly=TRUE)
 if (length(args)==0) {
   stop("At least one argument must be supplied, the key", call.=FALSE)
 }
+print('uploading to AWS')
 
-cont <- blob_container(endpoint=paste("https://",args[1],".blob.core.windows.net/$web",sep=""),
-                       key=args[2])
-upload_blob(cont, args[3], dest=args[3])
-print("Uploaded to azure")
 
+key = args[1]
+secret = args[2] 
+region=args[3]
+bucket = args[4]
+
+put_object(
+  file = file.path(".", "CovidDashboard.html"), 
+  object = "CovidDashboard.html", 
+  bucket = bucket,
+  multipart = TRUE,
+  region = region,
+  key = key, 
+  secret = secret,
+  headers=c('content-type' = 'text/html')
+)
+
+get_bucket(bucket = bucket,key = key, secret = secret ,region = region)
+head_object(object='CovidDashboard.html', bucket = bucket,key = key, secret = secret ,region = region)
+)
+
+
+print('uploaded')
