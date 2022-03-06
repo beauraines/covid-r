@@ -410,8 +410,27 @@ Charts Column 2
 
 ```
 
-### Placeholder
+### Last 3 Weeks
+```{r 30day chart, warning=FALSE}
+#  Maybe use the King County Sourced Dta
+threeWeeksData <- tibble(data) %>%
+  filter( date >= Sys.Date() - 21) 
 
+# Add hospitalizations
+# Add legend
+# Maybe use log axes
+ggplot(threeWeeksData) +
+  geom_line(aes(x=date, y=new_cases),colour= "darkblue") +
+  geom_line(aes(x=date, y=new_deaths)) +
+  # geom_bar(stat = "identity") +
+  xlab("")+ylab("Deaths and New Cases") + 
+  scale_x_date(date_labels = "%b-%d",date_breaks = "3 day")+
+  labs(title="Last 3 Weeks Deaths and Cases",caption="Data sourced from NY Times GitHub, does not display massive data correction in December") +
+  theme_ipsum()
+
+
+
+```
 
 
 # Washington State
