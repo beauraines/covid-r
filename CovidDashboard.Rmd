@@ -414,18 +414,27 @@ Charts Column 2
 ```{r 30day chart, warning=FALSE}
 #  Maybe use the King County Sourced Dta
 threeWeeksData <- tibble(data) %>%
-  filter( date >= Sys.Date() - 21) 
+  filter( date >= Sys.Date() - 21) %>%
+  mutate(new_cases_7d_average = mean_run(new_cases,k=7)) %>%
+  mutate(new_cases = ifelse(new_cases == 0, NA, new_cases))
+  
 
 # Add hospitalizations
 # Add legend
 # Maybe use log axes
+reportingDays <- c("Monday","Wednesday","Friday")
+
 ggplot(threeWeeksData) +
-  geom_line(aes(x=date, y=new_cases),colour= "darkblue") +
+  geom_bar(stat = "identity",aes(x=date, y=new_cases),fill="#FF9999", colour="#FF9999") +
+  geom_line(aes(x=date, y=new_cases_7d_average),colour= "darkblue") +
   geom_line(aes(x=date, y=new_deaths)) +
-  # geom_bar(stat = "identity") +
+  geom_label(aes(x=date, y=new_cases,label=new_cases),nudge_y = 50)+
+  geom_label(data = threeWeeksData %>% filter (weekdays(date) %in% reportingDays),aes(x=date, y=new_cases_7d_average,label=round(new_cases_7d_average,0)),nudge_y = 50)+
+  geom_label(data = threeWeeksData %>% filter (new_deaths > 0), aes(x=date, y=new_deaths,label = new_deaths),nudge_y = 50)+
+
   xlab("")+ylab("Deaths and New Cases") + 
   scale_x_date(date_labels = "%b-%d",date_breaks = "3 day")+
-  labs(title="Last 3 Weeks Deaths and Cases",caption="Data sourced from NY Times GitHub, does not display massive data correction in December") +
+  labs(title="Last 3 Weeks Deaths and Cases",caption="Data sourced from NY Times GitHub, King County data is updated Monday, Wednesday and Friday") +
   theme_ipsum()
 
 
