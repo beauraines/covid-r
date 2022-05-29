@@ -42,7 +42,15 @@ si_number = function(x, digits) {
 
 ```{r data preparation, include=FALSE}
 fips = read.csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", header=FALSE)
-nytimes= read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties.csv?raw=true")
+
+# 2022-05-13 NY Times breaks the county data sets into smaller pieces
+
+us_counties_2020 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2020.csv?raw=true")
+us_counties_2021 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv?raw=true")
+us_counties_2022 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2022.csv?raw=true")
+
+nytimes= bind_rows(list(us_counties_2020,us_counties_2021,us_counties_2022))
+
 king_county = subset(nytimes,state =='Washington' & county == "King")
 county_population = read.csv("https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv")
 vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
