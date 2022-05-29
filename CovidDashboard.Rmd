@@ -70,6 +70,7 @@ governors <- df[2][[1]] %>%
   select(State, Name, Party) %>%
   tibble()
 ```
+
 # King County
 
 ```{r King County Data Computation, message=FALSE, warning=FALSE}
@@ -153,8 +154,7 @@ if(cases_per_100K_7d >= 100) {
 
 ```
 
-KPI {data-width=350}
------------------------------------------------------------------------
+## KPI {data-width="350"}
 
 ### Yesterday New Cases
 
@@ -232,12 +232,13 @@ king_county_tibble %>%
   valueBox(caption='Deaths (7 day average)',icon='fa-skull')
 ```
 
-
-
 ### Community Risk
 
-<p style="text-align:center;font-size:x-large">`r risk`</p>
+<p style="text-align:center;font-size:x-large">
 
+`r risk`
+
+</p>
 
 ```{r guage, echo=FALSE, message = FALSE, warning=FALSE, fig.height=2, fig.align='left'}
 value <- cases_per_100K_7d[,1]
@@ -280,15 +281,14 @@ fig <- fig %>%
 fig
 
 ```
-### Last Updated {data-height=24px}
+
+### Last Updated {data-height="24px"}
 
 Last Updated `r Sys.time()`
 
 [Data Notes](#data-sources)
 
-
-Charts {data-width=650}
------------------------------------------------------------------------
+## Charts {data-width="650"}
 
 ### New Cases
 
@@ -355,6 +355,7 @@ ggplotly(combined_plot)  %>%
 ```
 
 ### Risk Factor over Time
+
 ```{r King County Risk Factors, echo=FALSE, message = FALSE, warning=FALSE }
 
 
@@ -383,12 +384,10 @@ ggplotly(risk_plot)  %>%
 
 ```
 
-
-
-Charts Column 2
----------------
+## Charts Column 2
 
 ### Daily Deaths
+
 ```{r Daily Deaths, message=FALSE, warning=FALSE}
 
 
@@ -419,13 +418,15 @@ Charts Column 2
 ```
 
 ### Last 3 Weeks
+
 ```{r 30day chart, warning=FALSE}
 #  Maybe use the King County Sourced Dta
 threeWeeksData <- tibble(data) %>%
   filter( date >= Sys.Date() - 21) %>%
   mutate(new_cases_7d_average = mean_run(new_cases,k=7)) %>%
   mutate(new_cases = ifelse(new_cases == 0, NA, new_cases))
-  
+
+write.csv(threeWeeksData,file="kingCountyThreeWeeks.csv",row.names = FALSE,na="")  
 
 # Add hospitalizations
 # Add legend
@@ -449,9 +450,9 @@ ggplot(threeWeeksData) +
 
 ```
 
-
 # Washington State
-## KPI {data-width=250}
+
+## KPI {data-width="250"}
 
 ```{r state KPI data, include=FALSE}
 source("CumulativeDeathsAndCases.R")
@@ -465,21 +466,22 @@ hospitalizations <-tibble(hospitalizations)
 hospitalizations_wa = subset(hospitalizations,state == 'WA')
 ```
 
-
-
 ### Cumulative Cases
+
 ```{r}
 format(wa_cases,big.mark = ",") %>%
   valueBox(caption='Cumulative Cases',icon="fa-frown")
 ```
 
 ### Cumulative Deaths
+
 ```{r}
 format(wa_deaths,big.mark = ",") %>%
   valueBox(caption='Cumulative Deaths',icon='fa-skull')
 ```
 
 ### Vaccination Rate
+
 ```{r}
 v_rate <- vaccinations %>%
   filter(date == max(date)) %>%
@@ -511,6 +513,7 @@ hospitalizations %>%
 ```
 
 ### Washington Hospital Bed Utilization
+
 ```{r Washington Hospital Bed Utilization}
 hospitalizations_wa %>%
   filter(date == max(date)) %>%
@@ -521,6 +524,7 @@ hospitalizations_wa %>%
 ```
 
 ### ICU Beds
+
 ```{r Washington ICU Bed Utilization}
 hospitalizations_wa %>%
   filter(date == max(date)) %>%
@@ -531,6 +535,7 @@ hospitalizations_wa %>%
 ```
 
 ### Last 14 Day Cases by County
+
 ```{r Washington Last 14 Day Table, echo=FALSE, message = FALSE}
 last_14_day_cases <- nytimes %>%
 filter( date >= Sys.Date() - 15) %>%
@@ -543,9 +548,10 @@ last_14_day_cases$cases_per_100K_14d = last_14_day_cases$last_14_days_cases / la
 knitr::kable(subset(last_14_day_cases,state=='Washington',select=c('county','last_14_days_cases')),caption="Cases by County, Last 14 Days")
 ```
 
+## Column 1 {data-width="750"}
 
-## Column 1 {data-width=750}
 ### County Cases per 100k Population over 7 days
+
 ```{r Washington county map, echo=FALSE, message = FALSE }
 outlist = list()
 
@@ -591,8 +597,8 @@ choroplethr::county_choropleth(metrics,title="Last 7 Days Cases per 100k populat
 
 ```
 
-
 ### Washington Vaccinations
+
 ```{r Washington Daily Vaccinations }
 daily_vax_plot <- vaccinations %>%
   filter( location %in% c('Washington')) %>%
@@ -612,7 +618,6 @@ daily_percent_vax_plot <- vaccinations %>%
 gridExtra::grid.arrange(daily_vax_plot,daily_percent_vax_plot)
 
 ```
-
 
 ## Column 2
 
@@ -641,6 +646,7 @@ hospitalizations_wa %>%
 ```
 
 ### Placeholder
+
 ```{r Washington New Cases Over Time}
 washington_by_day <- washington %>%
   group_by(date) %>%
@@ -675,8 +681,8 @@ ggplotly(washington_case_plot) %>%
 
 ```
 
-
 # United States
+
 ```{r US Data, message=FALSE}
 cases_week_over_week <- nytimes %>%
   filter( date >= Sys.Date() - 15 & date <= Sys.Date() - 8) %>%
@@ -711,7 +717,7 @@ us_by_day <- nytimes %>%
   )
 ```
 
-## US KPI Cards {data-width=350}
+## US KPI Cards {data-width="350"}
 
 ### new US cases by day
 
@@ -723,7 +729,6 @@ us_by_day %>%
   valueBox(caption='Yesterday New Cases',icon="fa-frown")
 ```
 
-
 ### new US Deaths by day
 
 ```{r}
@@ -734,20 +739,22 @@ us_by_day %>%
   valueBox(caption='Yesterday New Deaths',icon="fa-skull")
 ```
 
-
 ### Cumulative US Cases
+
 ```{r}
 si_number(us_cases,3) %>%
   valueBox(caption='Cumulative Cases',icon="fa-frown")
 ```
 
 ### Cumulative US Deaths
+
 ```{r}
 si_number(us_deaths,3) %>%
   valueBox(caption='Cumulative Deaths',icon="fa-skull")
 ```
 
 ### Total Vaccinated
+
 ```{r}
 vaccinations %>%
   filter(date == max(date)) %>%
@@ -760,6 +767,7 @@ vaccinations %>%
 ```
 
 ### Vaccination Rate
+
 ```{r}
 vaccinations %>%
   filter(date == max(date)) %>%
@@ -775,6 +783,7 @@ vaccinations %>%
 ```
 
 ### Currently Hospitalized
+
 ```{r Current Hospitalizations}
 hospitalizations %>%
   filter(date == max(date)) %>%
@@ -791,8 +800,8 @@ hospitalizations %>%
 
 ```
 
-
 ### Yesterday's Hospitalizations
+
 ```{r Yesterdays Hospitalizations KPI}
 hospitalizations %>%
   filter(date == max(date)) %>%
@@ -804,11 +813,10 @@ hospitalizations %>%
 
 ```
 
-
-
-## US Charts {data-width=650}
+## US Charts {data-width="650"}
 
 ### State Compared to prior 7 days
+
 ```{r Case Growth by State, echo=FALSE, message = FALSE, out.width="100%"}
 state_cases_week_over_week <- cases_week_over_week %>%
                                 group_by(state,state_fips) %>%
@@ -822,17 +830,21 @@ choroplethr::state_choropleth(state_cases_week_over_week,title="Week over Week C
 ```
 
 <!-- ### County Compared to prior 7 days  -->
+
 <!-- ```{r Case Growth by County, echo=FALSE, message = FALSE, out.width="100%"} -->
 
-
 <!-- ## Requires region and value for plot -->
+
 <!-- cases_week_over_week$value = cases_week_over_week$new_case_growth -->
+
 <!-- cases_week_over_week$region = cases_week_over_week$fips -->
 
 <!-- choroplethr::county_choropleth(cases_week_over_week,title="Week over Week Change in New Cases")+ scale_fill_brewer(palette='RdYlGn',direction = -1) -->
+
 <!-- ``` -->
 
 <!-- ### Cumulative US Cases -->
+
 ```{r Cumulative US Cases, eval=FALSE, message=FALSE, include=FALSE, out.width="100%"}
 nytimes %>%
   group_by(date) %>%
@@ -874,9 +886,10 @@ ggplotly(daily_new_cases_us_plot)  %>%
   )
 ```
 
-##
+## 
 
 ### Vaccinations
+
 ```{r Vaccination Rates by State, echo=FALSE, message = FALSE}
 vaccinations %>%
   filter(date == max(date)) %>%
@@ -887,6 +900,7 @@ vaccinations %>%
 ```
 
 ### Impact of Vaccination on Community Risk
+
 ```{r warning=FALSE}
 df <-inner_join(v_rate,state_cases_week_over_week,c("location"="state")) %>%
       left_join(state_population,c("location" = "STNAME"))
@@ -898,7 +912,6 @@ ggplot(df,aes(x=people_fully_vaccinated_per_hundred,y=(last_7_days_cases/populat
   xlab("Percent of state fully vaccinated") +
   ylab("Last 7 days cases per 100k population")
 ```
-
 
 # Hospitalizations
 
@@ -928,23 +941,22 @@ hospitalizations %>%
 
 ```
 
-# Data Sources
+# Data Sources {#data-sources}
 
 **Case Data**
 
-The New York Times. (2021). Coronavirus (Covid-19) Data in the United States. Retrieved `r Sys.time()``, from  [https://github.com/nytimes/covid-19-data](https://github.com/nytimes/covid-19-data)
+The New York Times. (2021). Coronavirus (Covid-19) Data in the United States. Retrieved \`r Sys.time()\`\`, from <https://github.com/nytimes/covid-19-data>
 
 **Vaccination Data**
 
-Mathieu, E., Ritchie, H., Ortiz-Ospina, E. _et al._ A global database of COVID-19 vaccinations. _Nat Hum Behav_ (2021). [https://doi.org/10.1038/s41562-021-01122-8](https://doi.org/10.1038/s41562-021-01122-8)
+Mathieu, E., Ritchie, H., Ortiz-Ospina, E. *et al.* A global database of COVID-19 vaccinations. *Nat Hum Behav* (2021). <https://doi.org/10.1038/s41562-021-01122-8>
 
 **Population and Geographic Datasets**
 
-United States Census Bureau, State and Conty FIPS identifiers. [https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt](https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt)
+United States Census Bureau, State and Conty FIPS identifiers. <https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt>
 
-United States Census Bureau, County Population Projections. [https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv](https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv)
+United States Census Bureau, County Population Projections. <https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv>
 
 **Hospitalization Data**
 
-[COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh), https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
-
+[COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh), <https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh>

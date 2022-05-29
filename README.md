@@ -17,4 +17,5 @@ docker build --pull --rm -f "Dockerfile" -t ${IMAGE_NAME} --build-arg AWS_KEY=${
 
 The container can then be pushed to an AWS ECR and scheduled to run at a specific time, with Event Bridge.
 
+aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
 

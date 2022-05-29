@@ -22,9 +22,20 @@ put_object(
   headers=c('content-type' = 'text/html')
 )
 
-get_bucket(bucket = bucket,key = key, secret = secret ,region = region)
-head_object(object='CovidDashboard.html', bucket = bucket,key = key, secret = secret ,region = region)
+put_object(
+  file = file.path(".", "kingCountyThreeWeeks.csv"), 
+  object = "kingCountyThreeWeeks.csv", 
+  bucket = bucket,
+  multipart = TRUE,
+  region = region,
+  key = key, 
+  secret = secret,
+  headers=c('content-type' = 'text/csv')
 )
+
+# get_bucket(bucket = bucket,key = key, secret = secret ,region = region)
+# head_object(object='CovidDashboard.html', bucket = bucket,key = key, secret = secret ,region = region)
+# )
 
 
 print('uploaded')
