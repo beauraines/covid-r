@@ -945,7 +945,7 @@ hospitalizations %>%
 
 **Case Data**
 
-The New York Times. (2021). Coronavirus (Covid-19) Data in the United States. Retrieved \`r Sys.time()\`\`, from <https://github.com/nytimes/covid-19-data>
+The New York Times. (2021). Coronavirus (Covid-19) Data in the United States. Retrieved \`r Sys.time()\`, from <https://github.com/nytimes/covid-19-data>
 
 **Vaccination Data**
 
