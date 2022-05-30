@@ -29,8 +29,7 @@ put_object(
   multipart = TRUE,
   region = region,
   key = key, 
-  secret = secret,
-  headers=c('content-type' = 'text/csv')
+  secret = secret
 )
 
 # get_bucket(bucket = bucket,key = key, secret = secret ,region = region)
