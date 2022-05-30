@@ -2,7 +2,6 @@ FROM beauraines/r-container as base
 
 FROM base as dashboard
 COPY processDashboard.sh .
-COPY upload.R .
 
 FROM dashboard
 
