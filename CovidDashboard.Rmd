@@ -344,6 +344,7 @@ combined_plot = combined_plot  +
 
 ggplotly(combined_plot)  %>%
   layout(
+    yaxis = list(fixedrange = FALSE),
     xaxis = list(
       rangeslider = list(type = "date")),
       title = list(text = paste0('King County Covid-19 Cases',
@@ -373,6 +374,7 @@ risk_plot <- ggplot(data = risk_data, mapping=aes(x=date,y=last_14_day_cases_per
 
 ggplotly(risk_plot)  %>%
   layout(
+    yaxis = list(fixedrange = FALSE),
     xaxis = list(
       rangeslider = list(type = "date")),
       title = list(text = paste0('King County 14 Day Risk per 100k population',
@@ -406,6 +408,7 @@ ggplotly(risk_plot)  %>%
   ) %>%
   ggplotly()  %>%
   layout(
+    yaxis = list(fixedrange = FALSE),
     xaxis = list(
       rangeslider = list(type = "date")),
       title = list(text = paste0('King County Covid-19 Deaths',
@@ -670,6 +673,7 @@ washington_case_plot <- ggplot(washington_by_day) +
 
 ggplotly(washington_case_plot) %>%
   layout(
+    yaxis = list(fixedrange = FALSE),
     xaxis = list(
       rangeslider = list(type = "date")),
       title = list(text = paste0('Washington Covid-19 Cases',
@@ -876,6 +880,7 @@ daily_new_cases_us_plot <- us_by_day %>%
 
 ggplotly(daily_new_cases_us_plot)  %>%
   layout(
+    yaxis = list(fixedrange = FALSE),
     xaxis = list(
       rangeslider = list(type = "date")),
       title = list(text = paste0('US New Cases',
