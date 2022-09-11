@@ -76,9 +76,14 @@ us_counties_2020 = read.csv("https://github.com/nytimes/covid-19-data/blob/maste
 us_counties_2021 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv?raw=true")
 us_counties_2022 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2022.csv?raw=true")
 
-nytimes= bind_rows(list(us_counties_2020,us_counties_2021,us_counties_2022))
+nytimes= bind_rows(list(us_counties_2020,us_counties_2021,us_counties_2022)) %>% tibble()
 
-king_county = subset(nytimes,state =='Washington' & county == "King")
+nytimes = nytimes %>% mutate(
+  fips = as.character(fips),
+  date = as.Date(date)
+) %>% filter (county != 'Unknown')
+
+king_county = nytimes  %>% filter(state =='Washington' & county == "King")
 county_population = read.csv("https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv")
 vaccinations <- read_csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/us_state_vaccinations.csv") %>%
   mutate(location = replace(location,location == 'New York State', 'New York'))
@@ -132,11 +137,14 @@ hospitalization_by_hospital = read.socrata("https://healthdata.gov/resource/anag
 # King County
 
 ```{r King County Data Computation, message=FALSE, warning=FALSE}
-data <- data.frame(date = as.Date(tail(king_county$date,-1)),
-                   fips_code = as.character(tail(king_county$fips),-1),
+
+
+
+data <- tibble(date = tail(king_county$date,-1),
+                   fips_code = tail(king_county$fips,-1),
                    new_cases = diff(king_county$cases), 
                    new_deaths = diff(king_county$deaths))
-## missing very very first day
+## missing very very first day - this can be resolved with runner
 
 
 risk_data <- tibble(date = data$date,
@@ -256,6 +264,57 @@ risk_data = risk_data %>%
 Covid Community Risk Levels based on new CDC methodology, including new hospitalizations and COVID bed utilization at community hospitals.
 </p>
 
+
+### Transmission Levels 
+
+<p style="text-align:center;font-size:x-large">
+
+`r risk`
+
+</p>
+
+```{r guage, echo=FALSE, message = FALSE, warning=FALSE, fig.height=2, fig.align='left'}
+value <- cases_per_100K_7d[,1]
+max_range <-  case_when(
+  value < 100 ~ 100,
+  value <= 250 ~ 250,
+  value <= 500 ~ 500,
+  value <=1000 ~ 1000,
+  TRUE ~ 250*(ceiling(value/250)+1)
+)
+
+fig <- plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = value,
+  title = list(text = "Seven Day Community Risk<br>Cases per<br>100k Population"),
+  type = "indicator",
+  mode = "gauge+number+delta",
+  delta = list(
+                reference= head(tail(risk_data,2),1)$last_7_day_cases_per_100k_pop,
+                increasing =list(color='#FF4136'),
+                decreasing =list(color='#3D9970')
+            ),
+  gauge = list(
+    bar = list(
+      color = "gray"
+    ),
+    axis = list(
+      range = c(0,max_range),
+      dtick = max_range/10
+    ),
+    steps = list(
+      list(range = c(0,25),color = "lightgreen"),
+      list(range = c(25,75), color = "lightyellow"),
+      list(range = c(75,max_range), color = "red")
+    )
+  ))
+fig <- fig %>%
+  layout(margin = list(l=20,r=30))
+
+fig
+
+```
+
 ### Yesterday New Cases
 
 ```{r valuebox, echo=FALSE, fig.align='left', fig.height=2, message=FALSE, warning=FALSE, include=FALSE}
@@ -332,55 +391,6 @@ king_county_tibble %>%
   valueBox(caption='Deaths (7 day average)',icon='fa-skull')
 ```
 
-### Transmission Levels 
-
-<p style="text-align:center;font-size:x-large">
-
-`r risk`
-
-</p>
-
-```{r guage, echo=FALSE, message = FALSE, warning=FALSE, fig.height=2, fig.align='left'}
-value <- cases_per_100K_7d[,1]
-max_range <-  case_when(
-  value < 100 ~ 100,
-  value <= 250 ~ 250,
-  value <= 500 ~ 500,
-  value <=1000 ~ 1000,
-  TRUE ~ 250*(ceiling(value/250)+1)
-)
-
-fig <- plot_ly(
-  domain = list(x = c(0, 1), y = c(0, 1)),
-  value = value,
-  title = list(text = "Seven Day Community Risk<br>Cases per<br>100k Population"),
-  type = "indicator",
-  mode = "gauge+number+delta",
-  delta = list(
-                reference= head(tail(risk_data,2),1)$last_7_day_cases_per_100k_pop,
-                increasing =list(color='#FF4136'),
-                decreasing =list(color='#3D9970')
-            ),
-  gauge = list(
-    bar = list(
-      color = "gray"
-    ),
-    axis = list(
-      range = c(0,max_range),
-      dtick = max_range/10
-    ),
-    steps = list(
-      list(range = c(0,25),color = "lightgreen"),
-      list(range = c(25,75), color = "lightyellow"),
-      list(range = c(75,max_range), color = "red")
-    )
-  ))
-fig <- fig %>%
-  layout(margin = list(l=20,r=30))
-
-fig
-
-```
 
 
 ### Last Updated {data-height="24px"}
@@ -661,8 +671,6 @@ outlist = list()
 washington = subset(nytimes,state =='Washington')
 
 #Remove unknown county
-washington <- subset(washington,county != 'Unknown')
-nytimes <- subset(nytimes,county != 'Unknown')
 
 
 for (c in unique(washington$county)) {
@@ -678,7 +686,7 @@ for (c in unique(washington$county)) {
   out <- data.frame(state = unique(county_info$state),
                     county = unique(county_info$county),
                     county_fips = county_fips,
-                    region = unique(county_info$fips),
+                    region = unique(as.numeric(county_info$fips)), ## region needs to be numeric for county_choropleth
                     first_case_reported = first_case_reported,
                     last_14d_cases = last_14d_cases,
                     last_7d_cases = last_7d_cases,
@@ -1047,6 +1055,14 @@ hospitalizations %>%
 ```
 
 # Data Sources {#data-sources}
+
+**Community Risk**
+
+https://www.cdc.gov/coronavirus/2019-ncov/science/community-levels.html
+
+Counties with fewer than 200 new Covid-19 cases per 100,000 people in the past week are considered to have "low" Covid-19 community levels if they have fewer than 10 new Covid-19 hospital admissions per 100,000 or less than 10% of staffed hospital beds occupied by Covid-19 patients on average in the past week.
+Levels are "medium" if counties have 10 to nearly 20 new Covid-19 hospital admissions per 100,000 or between 10% and 14.9% of staffed hospital beds occupied by Covid-19 patients on average in the past week.
+Levels are considered "high" if counties have 20 or more new Covid-19 hospital admissions per 100,000 or at least 15% of staffed hospital beds occupied by Covid-19 patients on average in the past week.
 
 **Case Data**
 
