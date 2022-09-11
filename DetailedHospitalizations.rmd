@@ -1,0 +1,193 @@
+---
+title: "Untitled"
+author: "Beau Raines"
+date: "2022-09-02"
+output:
+   html_document: default
+   github_document: default
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RSocrata)
+library(tidyverse)
+library(lubridate)
+
+fips = read_csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt",
+                col_names = c("state","state_code","county_code","county","level")
+                ) %>% 
+  mutate(fips_code = str_c(state_code,county_code))
+
+#  fips_code=53033
+# state=WA
+# city=ISSAQUAH
+
+# hospitalizations = read.socrata("https://healthdata.gov/resource/anag-cw7u.csv") %>%
+hospitalizations = read.socrata("https://healthdata.gov/resource/anag-cw7u.csv?state=WA") %>%
+    tibble() %>%
+    mutate(collection_week = as_date(collection_week),
+         fips_code = as.character(fips_code)) %>%
+    mutate(inpatient_beds_used_7_day_avg = na_if(inpatient_beds_used_7_day_avg,-999999.0),
+           inpatient_beds_7_day_avg = na_if(inpatient_beds_7_day_avg,-999999.0),
+           inpatient_beds_used_covid_7_day_avg = na_if(inpatient_beds_used_covid_7_day_avg,-999999.0),
+           total_staffed_adult_icu_beds_7_day_avg = na_if(total_staffed_adult_icu_beds_7_day_avg,-999999.0),
+           icu_beds_used_7_day_avg = na_if(icu_beds_used_7_day_avg,-999999.0)
+           ) %>%  
+    select( hospital_name,
+        ccn,
+        hospital_subtype,
+        fips_code,
+        is_metro_micro,
+        hhs_ids,
+        state,
+        geocoded_hospital_address,
+        collection_week,
+        total_beds_7_day_avg,
+        inpatient_beds_7_day_avg,
+        inpatient_beds_used_7_day_avg,
+        inpatient_beds_used_covid_7_day_avg,
+        total_icu_beds_7_day_avg,
+        total_staffed_adult_icu_beds_7_day_avg,
+        icu_beds_used_7_day_avg) %>%
+  left_join(fips)
+
+
+
+```
+
+## COVID-19 Reported Patient Impact and Hospital Capacity by Facility
+
+Data source: https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u
+FIPS data: https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt
+
+
+## Including Code
+
+You can see that some of the data is unclean, with large negative values
+
+```{r Data}
+max(hospitalizations$collection_week)
+min(hospitalizations$collection_week)
+
+
+hospitalizations %>% 
+    filter(collection_week == max(hospitalizations$collection_week),
+        fips_code == 53033) %>%
+    select( hospital_name,
+            ccn,
+            hospital_subtype,
+            is_metro_micro,
+            collection_week,
+            total_beds_7_day_avg,
+            inpatient_beds_7_day_avg,
+            inpatient_beds_used_7_day_avg,
+            inpatient_beds_used_covid_7_day_avg,
+            total_icu_beds_7_day_avg,
+            total_staffed_adult_icu_beds_7_day_avg,
+            icu_beds_used_7_day_avg)  %>%
+    knitr::kable()
+```
+
+
+```{r}
+
+
+hospitalizations_by_county = hospitalizations %>% 
+    group_by(county,fips_code,collection_week) %>%
+    summarize(
+        inpatient_beds = sum(inpatient_beds_7_day_avg, na.rm = TRUE), # Removing NA reports certain counties as zero were NA would be more useful
+        inpatient_beds_used = sum(inpatient_beds_used_7_day_avg, na.rm = TRUE), # but what aboutthe counties where they are mixed?
+        inpatient_beds_used_covid = sum(inpatient_beds_used_covid_7_day_avg, na.rm = TRUE),
+        utilization_inpatient = inpatient_beds_used / inpatient_beds,
+        utilization_inpatient_covid = inpatient_beds_used_covid / inpatient_beds
+    ) %>% ungroup()
+
+knitr::kable(hospitalizations_by_county %>% filter(collection_week == max(hospitalizations$collection_week)))
+
+hospitalizations_by_county %>%
+  filter(county %in% c("King County","Snohomish County","Thurston County")) %>%
+ggplot(aes(x=collection_week,y = utilization_inpatient_covid, color = county)) +
+    geom_point() + geom_line()
+
+hospitalizations_by_county %>%
+  filter(county %in% c("King County","Snohomish County","Thurston County")) %>%
+ggplot(aes(x=collection_week,y = utilization_inpatient, color = county)) +
+  ylim(0,1)+
+    geom_point() + geom_line()
+```
+
+
+```{r hospitalizations by state}
+hospitalizations_by_state = hospitalizations %>% 
+    filter(collection_week == max(hospitalizations$collection_week),
+        inpatient_beds_used_7_day_avg >0,
+        inpatient_beds_7_day_avg >0) %>%
+    group_by(state,collection_week) %>%
+    summarize(
+        inpatient_beds = sum(inpatient_beds_7_day_avg, na.rm = TRUE),
+        inpatient_beds_used = sum(inpatient_beds_used_7_day_avg, na.rm = TRUE),
+        inpatient_beds_used_covid = sum(inpatient_beds_used_7_day_avg, na.rm = TRUE),
+        utilization_inpatient = inpatient_beds_used / inpatient_beds,
+        utilization_inpatient_covid = inpatient_beds_used_covid / inpatient_beds
+
+    )
+
+knitr::kable(hospitalizations_by_state)    
+
+```
+
+
+```{r Washington data over time}
+
+hospitalizations_by_county = hospitalizations %>% 
+    filter(inpatient_beds_used_7_day_avg >0,
+        inpatient_beds_7_day_avg >0,
+        state == "WA") %>%
+    group_by(state,county,fips_code,collection_week) %>%
+    summarize(
+        inpatient_beds = sum(inpatient_beds_7_day_avg),
+        inpatient_beds_used = sum(inpatient_beds_used_7_day_avg),
+        inpatient_beds_used_covid = sum(inpatient_beds_used_7_day_avg),
+        utilization_inpatient = inpatient_beds_used / inpatient_beds,
+        utilization_inpatient_covid = inpatient_beds_used_covid / inpatient_beds
+    ) %>% ungroup()
+
+# knitr::kable(hospitalizations_by_county)
+
+ggplot(data = hospitalizations_by_county,
+       aes(x=collection_week,
+           y = utilization_inpatient_covid,
+           color = county)) +
+    geom_line() +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    ylab('') + xlab('') 
+```
+
+
+```{r}
+hospitalizations_by_state = hospitalizations %>% 
+    filter(inpatient_beds_used_7_day_avg >0,
+        inpatient_beds_7_day_avg >0) %>%
+    group_by(state,collection_week) %>%
+    summarize(
+        inpatient_beds = sum(inpatient_beds_7_day_avg),
+        inpatient_beds_used = sum(inpatient_beds_used_7_day_avg),
+        inpatient_beds_used_covid = sum(inpatient_beds_used_7_day_avg),
+        utilization_inpatient = inpatient_beds_used / inpatient_beds,
+        utilization_inpatient_covid = inpatient_beds_used_covid / inpatient_beds        
+    )
+
+
+ggplot(data = hospitalizations_by_state,
+       aes(x=collection_week,
+           y = utilization_inpatient_covid,
+           color = state)) +
+    geom_line() +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_date(date_labels = "%b-%y",date_breaks = "2 month") +
+    ylab('') + xlab('') +
+    facet_wrap(~state)
+
+```

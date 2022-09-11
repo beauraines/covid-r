@@ -20,6 +20,9 @@ library(choroplethr)
 library(rvest)
 library(geofacet)
 library(runner)
+library(RSocrata)
+library(lubridate)
+
 
 # extrafont::loadfonts(quiet=TRUE)
 
@@ -38,10 +41,34 @@ si_number = function(x, digits) {
     )
 }
 
+community_risk_level = function(new_cases,new_admissions,covid_bed_utilization) {
+  if ( is.na(new_cases) || is.na(new_admissions) || is.na(covid_bed_utilization)) {
+    return(NA)
+  } 
+  if (new_cases < 200 ) { # && !is.na(new_cases) && !is.na(new_admissions) && !is.na(covid_bed_utilization)) {
+    if (new_admissions >= 20 || covid_bed_utilization >= 0.15) {
+      "High"
+    } else if (new_admissions >= 10 || covid_bed_utilization >= 0.1 ) {
+      "Medium"
+    } else {
+      "Low"
+    }
+  } else if (new_cases >= 200 ) { #&& !is.na(new_cases) && !is.na(new_admissions) && !is.na(covid_bed_utilization)) { 
+    if (new_admissions >= 10 || covid_bed_utilization >= 0.1) {
+      return("High")
+    } else if (new_admissions < 10 || covid_bed_utilization < 0.1 ) {
+       return("Medium")
+    }
+  } 
+}
+
 ```
 
 ```{r data preparation, include=FALSE}
-fips = read.csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt", header=FALSE)
+fips = read_csv("https://www2.census.gov/geo/docs/reference/codes/files/national_county.txt",
+                col_names = c("state","state_code","county_code","county","level")
+                ) %>% 
+  mutate(fips_code = str_c(state_code,county_code))
 
 # 2022-05-13 NY Times breaks the county data sets into smaller pieces
 
@@ -69,17 +96,52 @@ governors <- df[2][[1]] %>%
   mutate(Office = str_remove(Office,"Governor of "),State = str_remove(Office,"the ")) %>%
   select(State, Name, Party) %>%
   tibble()
+
+## Hospitalization Data by Hospital
+hospitalization_by_hospital = read.socrata("https://healthdata.gov/resource/anag-cw7u.csv?state=WA") %>%
+    tibble() %>%
+    mutate(collection_week = as_date(collection_week),
+         fips_code = as.character(fips_code)) %>%
+    mutate(inpatient_beds_used_7_day_avg = na_if(inpatient_beds_used_7_day_avg,-999999.0),
+           inpatient_beds_7_day_avg = na_if(inpatient_beds_7_day_avg,-999999.0),
+           inpatient_beds_used_covid_7_day_avg = na_if(inpatient_beds_used_covid_7_day_avg,-999999.0),
+           total_staffed_adult_icu_beds_7_day_avg = na_if(total_staffed_adult_icu_beds_7_day_avg,-999999.0),
+           icu_beds_used_7_day_avg = na_if(icu_beds_used_7_day_avg,-999999.0),
+           previous_day_admission_adult_covid_confirmed_7_day_sum = na_if(previous_day_admission_adult_covid_confirmed_7_day_sum,-999999.0)
+           ) %>%  
+    select( hospital_name,
+        ccn,
+        hospital_subtype,
+        fips_code,
+        is_metro_micro,
+        hhs_ids,
+        state,
+        geocoded_hospital_address,
+        collection_week,
+        total_beds_7_day_avg,
+        inpatient_beds_7_day_avg,
+        inpatient_beds_used_7_day_avg,
+        inpatient_beds_used_covid_7_day_avg,
+        total_icu_beds_7_day_avg,
+        total_staffed_adult_icu_beds_7_day_avg,
+        icu_beds_used_7_day_avg,
+        previous_day_admission_adult_covid_confirmed_7_day_sum) %>%
+  left_join(fips)
 ```
 
 # King County
 
 ```{r King County Data Computation, message=FALSE, warning=FALSE}
-data <- data.frame(date = as.Date(tail(king_county$date,-1)), new_cases = diff(king_county$cases), new_deaths = diff(king_county$deaths))
+data <- data.frame(date = as.Date(tail(king_county$date,-1)),
+                   fips_code = as.character(tail(king_county$fips),-1),
+                   new_cases = diff(king_county$cases), 
+                   new_deaths = diff(king_county$deaths))
 ## missing very very first day
 
 
 risk_data <- tibble(date = data$date,
               new_cases = data$new_cases,
+              fips_code = data$fips_code,
               last_14_day_cases = NULL,
               last_14_day_cases_per_100k_pop = NULL
          )
@@ -123,12 +185,11 @@ for (i in 1:nrow(risk_data)) {
   }
 }
 
-
-
 king_county_tibble <- king_county %>%
   tibble() %>%
   mutate(
     date = lubridate::ymd(date),
+    fips_code = as.character(fips),
     new_cases = cases - lag(cases,default=0),
     new_deaths = deaths -lag(deaths,default=0)
   )
@@ -152,13 +213,52 @@ if(cases_per_100K_7d >= 100) {
   risk = "Low"
 }
 
+hospitalizations_king_county = hospitalization_by_hospital %>%
+  filter(fips_code == '53033') %>%
+  group_by(county,fips_code,collection_week) %>%
+  summarize(
+      inpatient_beds = sum(inpatient_beds_7_day_avg, na.rm = TRUE), # Removing NA reports certain counties as zero were NA would be more useful
+      inpatient_beds_used = sum(inpatient_beds_used_7_day_avg, na.rm = TRUE), # but what aboutthe counties where they are mixed?
+      inpatient_beds_used_covid = sum(inpatient_beds_used_covid_7_day_avg, na.rm = TRUE),
+      utilization_inpatient = inpatient_beds_used / inpatient_beds,
+      utilization_inpatient_covid = inpatient_beds_used_covid / inpatient_beds,
+      new_admissions = sum(previous_day_admission_adult_covid_confirmed_7_day_sum, na.rm = TRUE)
+  ) %>% 
+  ungroup()
+
+# This is interesting, but maybe not useful
+king_county_tibble = king_county_tibble %>%
+  left_join(hospitalizations_king_county %>% select(fips_code,collection_week,utilization_inpatient,utilization_inpatient_covid),
+            c("fips_code"="fips_code","date"= "collection_week"))
+
+
+risk_data = risk_data %>% 
+    left_join(hospitalizations_king_county %>% select(fips_code,collection_week,utilization_inpatient,utilization_inpatient_covid,new_admissions),
+            c("fips_code"="fips_code","date"= "collection_week")) %>%
+  mutate(population = county_population %>% filter(STNAME == 'Washington' & CTYNAME == "King County") %>% pull(POPESTIMATE2019),
+         new_admissions_per_100k_7d = (new_admissions / population) * 100000,
+         community_risk = pmap(list(last_7_day_cases_per_100k_pop,new_admissions_per_100k_7d,utilization_inpatient_covid),community_risk_level)
+  )
+
+
+
 ```
 
 ## KPI {data-width="350"}
 
+### Community Risk Level {data-height="80px"}
+
+<p style="text-align:center;font-size:x-large">
+`r risk_data %>% filter(!is.na(community_risk)) %>% arrange(desc(date)) %>% head(1) %>% pull(community_risk)`
+</p>
+
+<p style="font-size:x-small">
+Covid Community Risk Levels based on new CDC methodology, including new hospitalizations and COVID bed utilization at community hospitals.
+</p>
+
 ### Yesterday New Cases
 
-```{r valuebox, echo=FALSE, message = FALSE, warning=FALSE,fig.height=2, fig.align='left', include=FALSE}
+```{r valuebox, echo=FALSE, fig.align='left', fig.height=2, message=FALSE, warning=FALSE, include=FALSE}
 yesterday_new_cases <- tail(data$new_cases,1)
 yesterday_deaths <-  tail(data$new_deaths,1)
 
@@ -232,7 +332,7 @@ king_county_tibble %>%
   valueBox(caption='Deaths (7 day average)',icon='fa-skull')
 ```
 
-### Community Risk
+### Transmission Levels 
 
 <p style="text-align:center;font-size:x-large">
 
@@ -281,6 +381,7 @@ fig <- fig %>%
 fig
 
 ```
+
 
 ### Last Updated {data-height="24px"}
 
@@ -462,7 +563,6 @@ source("CumulativeDeathsAndCases.R")
 ```
 
 ```{r Hospitaliztion Data, warning=FALSE}
-library(RSocrata)
 hospitalizations = read.socrata("https://healthdata.gov/resource/g62h-syeh.csv")
 hospitalizations$date = as.Date(hospitalizations$date)
 hospitalizations <-tibble(hospitalizations)
@@ -965,3 +1065,6 @@ United States Census Bureau, County Population Projections. <https://www2.census
 **Hospitalization Data**
 
 [COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh), <https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh>
+
+**County Level Hospitalization Data**
+[COVID-19 Reported Patient Impact and Hospital Capacity by Facility](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u), <https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u>
