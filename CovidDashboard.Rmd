@@ -75,8 +75,10 @@ fips = read_csv("https://www2.census.gov/geo/docs/reference/codes/files/national
 us_counties_2020 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2020.csv?raw=true")
 us_counties_2021 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2021.csv?raw=true")
 us_counties_2022 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2022.csv?raw=true")
+us_counties_2023 = read.csv("https://github.com/nytimes/covid-19-data/blob/master/us-counties-2023.csv?raw=true")
 
-nytimes= bind_rows(list(us_counties_2020,us_counties_2021,us_counties_2022)) %>% tibble()
+nytimes= bind_rows(list(us_counties_2020,us_counties_2021,us_counties_2022,us_counties_2023)) %>% tibble()
+
 
 nytimes = nytimes %>% mutate(
   fips = as.character(fips),
